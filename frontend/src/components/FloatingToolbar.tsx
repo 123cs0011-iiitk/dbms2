@@ -1,4 +1,4 @@
-import { Plus, Link2, Eye, EyeOff, Trash2, LayoutGrid } from 'lucide-react';
+import { Plus, Link2, Eye, EyeOff, Trash2, LayoutGrid, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
@@ -10,6 +10,10 @@ type FloatingToolbarProps = {
   hasSelection: boolean;
   showAttributes: boolean;
   onToggleAttributes: () => void;
+  zoom: number;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onZoomReset: () => void;
 };
 
 export function FloatingToolbar({
@@ -20,6 +24,10 @@ export function FloatingToolbar({
   hasSelection,
   showAttributes,
   onToggleAttributes,
+  zoom,
+  onZoomIn,
+  onZoomOut,
+  onZoomReset,
 }: FloatingToolbarProps) {
   return (
     <TooltipProvider>
@@ -123,6 +131,56 @@ export function FloatingToolbar({
           </TooltipTrigger>
           <TooltipContent side="right" className="font-medium">
             <p style={{ fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif' }}>Delete Selected</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <div className="h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-600 to-transparent my-1" />
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <motion.button
+              onClick={onZoomIn}
+              className="h-11 w-11 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-lg transition-all duration-200 flex items-center justify-center"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <ZoomIn className="w-5 h-5" />
+            </motion.button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="font-medium">
+            <p style={{ fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif' }}>Zoom In ({zoom}%)</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <motion.button
+              onClick={onZoomOut}
+              className="h-11 w-11 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-lg transition-all duration-200 flex items-center justify-center"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <ZoomOut className="w-5 h-5" />
+            </motion.button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="font-medium">
+            <p style={{ fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif' }}>Zoom Out ({zoom}%)</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <motion.button
+              onClick={onZoomReset}
+              className="h-11 w-11 rounded-xl bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 shadow-lg transition-all duration-200 flex items-center justify-center"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Maximize2 className="w-5 h-5" />
+            </motion.button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="font-medium">
+            <p style={{ fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif' }}>Reset Zoom (100%)</p>
           </TooltipContent>
         </Tooltip>
       </motion.div>

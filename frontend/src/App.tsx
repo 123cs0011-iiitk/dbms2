@@ -111,6 +111,19 @@ export default function App() {
     setZoom(Math.max(25, Math.floor(newZoom))); // Minimum 25% zoom
   }, []);
 
+  // Zoom handlers
+  const handleZoomIn = useCallback(() => {
+    setZoom(prev => Math.min(200, prev + 10)); // Max 200%
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoom(prev => Math.max(25, prev - 10)); // Min 25%
+  }, []);
+
+  const handleZoomReset = useCallback(() => {
+    setZoom(100);
+  }, []);
+
   // Auto-zoom for ER diagram mode
   useEffect(() => {
     if (viewMode === 'er-diagram' && entities.length > 0) {
@@ -531,6 +544,10 @@ export default function App() {
                 hasSelection={!!selectedElement}
                 showAttributes={showAttributes}
                 onToggleAttributes={() => setShowAttributes(!showAttributes)}
+                zoom={zoom}
+                onZoomIn={handleZoomIn}
+                onZoomOut={handleZoomOut}
+                onZoomReset={handleZoomReset}
               />
               
               <Canvas
