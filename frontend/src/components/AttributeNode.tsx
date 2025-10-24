@@ -49,8 +49,8 @@ export function AttributeNode({
     }
     
     // Use improved circular position that matches Canvas.tsx logic
-    const baseRadius = 190 + total * 10; // Match attributeLayout.ts config
-    const radius = Math.min(Math.max(baseRadius, 150), 290); // Match attributeLayout.ts config
+    const baseRadius = 200 + total * 12; // Adjusted for properly proportioned nodes
+    const radius = Math.min(Math.max(baseRadius, 160), 320); // Adjusted for properly proportioned nodes
     
     let angle;
     if (total === 1) {
@@ -63,8 +63,9 @@ export function AttributeNode({
     }
     
     // Ensure attributes are positioned relative to their parent entity only
-    const x = entityX + 90 + Math.cos(angle) * radius;
-    const y = entityY + 35 + Math.sin(angle) * radius;
+    // Adjust for top-left transform origin (subtract half width/height for centering)
+    const x = entityX + 90 + Math.cos(angle) * radius - 70; // -70 = half of 140px width
+    const y = entityY + 35 + Math.sin(angle) * radius - 18; // -18 = half of 36px height
     
     return { x, y };
   };
@@ -119,24 +120,27 @@ export function AttributeNode({
   return (
     <motion.div
       ref={nodeRef}
-      className={`absolute z-5 ${isDragging ? 'z-50' : 'z-5'}`}
+      className={`absolute ${isDragging ? 'z-50' : 'z-5'}`}
       style={{
         left: position.x * scale + pan.x,
         top: position.y * scale + pan.y,
-        transform: `translate(-50%, -50%) scale(${scale})`,
-        transformOrigin: 'center',
+        transform: `scale(${scale})`,
+        transformOrigin: 'top left',
       }}
       onMouseDown={handleMouseDown}
       initial={{ scale: 0, opacity: 0 }}
-      animate={{
+      animate={{ 
         scale: scale,
         opacity: 1,
         y: [0, -4, 0],
       }}
       whileHover={{ scale: scale * 1.05 }}
       transition={{
-        scale: { duration: 0.4, delay: index * 0.1 },
-        opacity: { duration: 0.4, delay: index * 0.1 },
+        delay: index * 0.1,
+        type: 'spring',
+        stiffness: 300,
+        damping: 25,
+        opacity: { duration: 0.3 },
         y: {
           duration: 3,
           repeat: Infinity,
@@ -150,17 +154,24 @@ export function AttributeNode({
       {/* ERD Attribute Ellipse with Gradient */}
       <div className="relative">
         <div
-          className={`px-16 py-4 min-w-[140px] rounded-full shadow-xl bg-gradient-to-br ${getGradient()} text-sm backdrop-blur-sm cursor-move transition-all duration-300 ${
+          className={`rounded-full shadow-xl bg-gradient-to-br ${getGradient()} backdrop-blur-sm cursor-move transition-all duration-300 ${
             isSelected ? 'ring-2 ring-white/70' : 'hover:shadow-2xl'
           }`}
           style={{
+            width: '140px',
+            height: '36px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '0.875rem',
+            fontWeight: '600',
             boxShadow: isSelected 
               ? '0 12px 40px rgba(0,0,0,0.3)' 
               : '0 8px 32px rgba(0,0,0,0.2)',
           }}
         >
           <span 
-            className={`text-white font-semibold drop-shadow-md whitespace-nowrap ${
+            className={`text-white drop-shadow-md whitespace-nowrap ${
               attribute.isPrimaryKey ? 'underline decoration-2 underline-offset-2' : ''
             }`}
             style={{

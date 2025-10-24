@@ -484,10 +484,6 @@ export default function App() {
     setRelationships(sample.relationships);
     setSqlCode(sample.sql || '');
     setHasUnsavedChanges(false);
-    // Auto-show SQL preview if sample has SQL
-    if (sample.sql) {
-      setShowSqlPreview(true);
-    }
   };
 
   const handleSaveSchema = async () => {
@@ -682,10 +678,6 @@ export default function App() {
               setCurrentPrompt(prompt || 'Generated Schema');
               setShowPromptModal(false);
               setHasUnsavedChanges(false);
-              // Auto-show SQL preview when generated from AI
-              if (sql) {
-                setShowSqlPreview(true);
-              }
             }}
           />
         )}
@@ -719,10 +711,6 @@ export default function App() {
               setSqlCode(sql);
               setShowSavedSchemasModal(false);
               setHasUnsavedChanges(false);
-              // Auto-show SQL preview if loaded schema has SQL
-              if (sql) {
-                setShowSqlPreview(true);
-              }
             }}
           />
         )}

@@ -48,10 +48,10 @@ export function getBounds(element: any, position: Position): Bounds {
       };
     case 'attribute':
       return {
-        x: position.x - 30 - ATTRIBUTE_PADDING / 2,
-        y: position.y - 15 - ATTRIBUTE_PADDING / 2,
-        width: 60 + ATTRIBUTE_PADDING,
-        height: 30 + ATTRIBUTE_PADDING,
+        x: position.x - 70 - ATTRIBUTE_PADDING / 2,
+        y: position.y - 18 - ATTRIBUTE_PADDING / 2,
+        width: 140 + ATTRIBUTE_PADDING,
+        height: 36 + ATTRIBUTE_PADDING,
       };
     default:
       return {
