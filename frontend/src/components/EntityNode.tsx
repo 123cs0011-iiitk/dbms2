@@ -3,6 +3,7 @@ import { Key } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Entity } from '../App';
 import { isPositionValid, createCollisionElements } from '../utils/layoutUtils';
+import { formatDisplayName } from '../utils/formatUtils';
 
 type EntityNodeProps = {
   entity: Entity;
@@ -153,7 +154,7 @@ export function EntityNode({
                 textDecoration: 'none',
               }}
             >
-              {entity.name}
+              {formatDisplayName(entity.name)}
             </span>
           </div>
         </div>

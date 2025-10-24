@@ -74,6 +74,16 @@ export function Canvas({
         }
         
         positions.set(attr.id, attrPosition);
+        
+        // Also add positions for sub-attributes if this is a composite attribute
+        if (attr.isComposite && attr.subAttributes) {
+          attr.subAttributes.forEach((subAttr) => {
+            if (subAttr.customX !== undefined && subAttr.customY !== undefined) {
+              positions.set(subAttr.id, { x: subAttr.customX, y: subAttr.customY });
+              seenIds.add(subAttr.id);
+            }
+          });
+        }
       });
     });
     
@@ -99,6 +109,61 @@ export function Canvas({
 
   const handleMouseUp = () => {
     setIsPanning(false);
+  };
+
+  // Draw connections from composite attributes to sub-attributes
+  const renderSubAttributeConnections = () => {
+    if (!showAttributes) return null;
+    const scale = zoom / 100;
+    
+    const connections: React.ReactElement[] = [];
+    
+    entities.forEach((entity) => {
+      entity.attributes?.forEach((attr) => {
+        // Only process composite attributes with sub-attributes
+        if (!attr.isComposite || !attr.subAttributes || attr.subAttributes.length === 0) {
+          return;
+        }
+        
+        const parentPosition = allAttributePositions.get(attr.id);
+        if (!parentPosition) return;
+        
+        const parentX = parentPosition.x * scale + pan.x;
+        const parentY = parentPosition.y * scale + pan.y;
+        
+        // Draw connections to each sub-attribute
+        attr.subAttributes.forEach((subAttr, subIndex) => {
+          const subPosition = allAttributePositions.get(subAttr.id);
+          if (!subPosition) return;
+          
+          const subX = subPosition.x * scale + pan.x;
+          const subY = subPosition.y * scale + pan.y;
+          
+          connections.push(
+            <motion.line
+              key={`sub-conn-${attr.id}-${subAttr.id}`}
+              x1={parentX}
+              y1={parentY}
+              x2={subX}
+              y2={subY}
+              stroke="url(#gradient-composite)"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeDasharray="4,2"
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 0.7 }}
+              transition={{ 
+                duration: 0.8, 
+                delay: subIndex * 0.1 + 0.3,
+                ease: "easeOut"
+              }}
+            />
+          );
+        });
+      });
+    });
+    
+    return connections;
   };
 
   // Draw animated attribute connections with enhanced styling
@@ -385,6 +450,10 @@ export function Canvas({
             <stop offset="0%" stopColor="#10b981" stopOpacity="0.8" />
             <stop offset="100%" stopColor="#059669" stopOpacity="0.8" />
           </linearGradient>
+          <linearGradient id="gradient-composite" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.6" />
+          </linearGradient>
           
           {/* Entity-specific gradients for better visual association */}
           {entities.map(entity => (
@@ -395,30 +464,59 @@ export function Canvas({
           ))}
         </defs>
         {renderAttributeConnections()}
+        {renderSubAttributeConnections()}
         {renderRelationshipConnections()}
       </svg>
 
       {/* Attributes (ellipses - optional) */}
       {showAttributes && entities.map((entity) => (
-        entity.attributes?.map((attr, index) => (
-          <AttributeNode
-            key={attr.id}
-            attribute={attr}
-            entityId={entity.id}
-            entityX={entity.x}
-            entityY={entity.y}
-            index={index}
-            total={entity.attributes?.length || 1}
-            zoom={zoom}
-            pan={pan}
-            onMove={onAttributeMove}
-            onSelect={() => onSelectElement({ type: 'attribute', id: attr.id })}
-            isSelected={selectedElement?.type === 'attribute' && selectedElement.id === attr.id}
-            allAttributePositions={allAttributePositions}
-            entities={entities}
-            relationships={relationships}
-          />
-        ))
+        <React.Fragment key={`entity-attrs-${entity.id}`}>
+          {entity.attributes?.map((attr, index) => (
+            <React.Fragment key={attr.id}>
+              <AttributeNode
+                attribute={attr}
+                entityId={entity.id}
+                entityX={entity.x}
+                entityY={entity.y}
+                index={index}
+                total={entity.attributes?.length || 1}
+                zoom={zoom}
+                pan={pan}
+                onMove={onAttributeMove}
+                onSelect={() => onSelectElement({ type: 'attribute', id: attr.id })}
+                isSelected={selectedElement?.type === 'attribute' && selectedElement.id === attr.id}
+                allAttributePositions={allAttributePositions}
+                entities={entities}
+                relationships={relationships}
+              />
+              {/* Render sub-attributes for composite attributes */}
+              {attr.isComposite && attr.subAttributes && attr.subAttributes.map((subAttr, subIndex) => {
+                const parentPos = allAttributePositions.get(attr.id);
+                if (!parentPos) return null;
+                
+                return (
+                  <AttributeNode
+                    key={subAttr.id}
+                    attribute={subAttr}
+                    entityId={entity.id}
+                    entityX={parentPos.x - 70} // Offset from parent attribute position
+                    entityY={parentPos.y - 20}
+                    index={subIndex}
+                    total={attr.subAttributes?.length || 1}
+                    zoom={zoom}
+                    pan={pan}
+                    onMove={onAttributeMove}
+                    onSelect={() => onSelectElement({ type: 'attribute', id: subAttr.id })}
+                    isSelected={selectedElement?.type === 'attribute' && selectedElement.id === subAttr.id}
+                    allAttributePositions={allAttributePositions}
+                    entities={entities}
+                    relationships={relationships}
+                  />
+                );
+              })}
+            </React.Fragment>
+          ))}
+        </React.Fragment>
       ))}
 
       {/* Entities (rectangles) */}

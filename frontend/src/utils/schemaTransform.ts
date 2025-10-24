@@ -1,5 +1,6 @@
 import type { Entity, Attribute, Relationship } from '../App';
 import { generateSmartLayout } from './aiLayout';
+import { layoutAllAttributes, applyAttributePositions } from './attributeLayout';
 
 // Backend schema types (matching the Python backend)
 export interface BackendTable {
@@ -173,6 +174,12 @@ export async function backendToFrontend(schemaData: BackendSchema): Promise<{
       relationships.push(relationship);
     }
   });
+
+  // Auto-layout attributes around their parent entities
+  console.log('🎯 Auto-positioning attributes for optimal layout...');
+  const attributePositions = layoutAllAttributes(entities);
+  applyAttributePositions(entities, attributePositions);
+  console.log(`✅ Positioned ${attributePositions.size} attributes`);
 
   return { entities, relationships };
 }

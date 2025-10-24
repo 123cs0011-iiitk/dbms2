@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
@@ -84,7 +84,7 @@ export function PromptModal({ onClose, onGenerate }: PromptModalProps) {
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                Generate Schema
+                Generate
               </>
             )}
           </Button>
