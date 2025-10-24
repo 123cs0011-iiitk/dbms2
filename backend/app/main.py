@@ -16,8 +16,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from project root
+load_dotenv(Path(__file__).parent.parent.parent / ".env")
 
 # Initialize FastAPI app
 app = FastAPI(title="Database Management System", version="2.0.0")

@@ -1,6 +1,6 @@
 # 🤖 Prompt-Based Database Builder
 
-A powerful full-stack web application that converts natural language database descriptions into SQL table definitions, builds ER diagrams, executes SQL on a real database, and stores schemas for reuse.
+A powerful full-stack web application that converts natural language database descriptions into SQL schemas, builds interactive ER diagrams, executes SQL on SQLite databases, and manages schema persistence.
 
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-19+-blue.svg)](https://reactjs.org/)
@@ -10,370 +10,281 @@ A powerful full-stack web application that converts natural language database de
 
 ## ✨ Demo
 
-Generate complex database schemas from simple English descriptions:
-
+Generate complete database schemas from natural language:
 ```
-Input: "Create a hospital database with entities Doctor, Patient, and Appointment. 
-Doctor has Doctor_ID, Name, Specialization. Patient has Patient_ID, Name, Age, Address. 
-Appointment connects Doctor and Patient with Date and Time."
-
-Output: Complete SQL schema with proper relationships, ER diagram, and visual representation!
+Input: "Create a hospital database with Doctor, Patient, and Appointment entities..."
+Output: Complete SQL schema with relationships, ER diagrams, and visual canvas!
 ```
 
 ## 🚀 Features
 
-### ✨ Core Features
-- 🤖 **AI-Powered Generation**: Uses Google Gemini AI to convert natural language to SQL
-- 📊 **Visual Database Designer**: Drag-and-drop interface for creating tables
-- 🔗 **ER Diagram Generation**: Automatic Entity Relationship diagrams with Mermaid
-- 💾 **Real Database Execution**: Creates actual SQLite tables from generated SQL
-- 📁 **Schema Management**: Save, load, and reuse previously generated schemas
-- 🎨 **Modern UI**: Clean, responsive interface with dark/light themes
-- 📤 **Export Capabilities**: Download SQL files and PNG diagrams
-- 🔄 **Interactive Tables**: Add, edit, and manage table data
-- 🔑 **Composite Primary Keys**: Support for multiple column primary keys
-- 🗑️ **Canvas Editing**: Add/delete tables directly on the canvas
+| Category | Features |
+|----------|----------|
+| **AI-Powered** | Google Gemini AI integration, Perplexity API support, Intelligent entity recognition, Automatic relationship detection |
+| **Visual Design** | Drag-and-drop canvas, Interactive entity nodes, Relationship diamonds, Custom attribute positioning, Color-coded entities |
+| **Database** | Real SQLite execution, Interactive SQL executor, Sample data management, Table structure inspection, Multi-table operations |
+| **Schema Management** | Save/load schemas, Export SQL files, Export PNG diagrams, Mermaid ER diagrams, Playground with 3 sample databases |
+| **Editing** | Add/delete entities, Composite primary keys, Foreign key relationships, Manual and AI generation, Auto-layout algorithm |
+| **UI/UX** | Dark/light themes, Floating toolbar, Status bar tracking, Right sidebar properties, Settings modal, Real-time validation |
 
-### 🎯 Key Capabilities
-- **🤖 True AI-Powered Generation**: Uses Google Gemini AI to understand ANY database description
-- **Smart SQL Generation**: Creates proper table structures with relationships automatically
-- **Intelligent Entity Recognition**: Recognizes entities in any domain
-- **Automatic Relationship Detection**: Creates proper foreign key relationships
-- **Visual Schema Design**: See your database structure at a glance
-- **Data Management**: Add sample data and test your schema
-- **Schema Persistence**: Save and load complete schemas with data
-- **Canvas-Based Editing**: Edit schemas directly on the visual canvas
+### Key Capabilities
+- **True AI Generation**: Describe any database in plain English and watch it materialize
+- **Interactive Canvas**: Drag, position, and connect entities visually with smooth animations
+- **SQL Executor**: Run queries directly in the app with formatted result tables
+- **Sample Data**: Add test data to entities with auto-generated INSERT statements
+- **Playground**: Load pre-built schemas (School, E-Commerce, Hospital) for quick testing
+- **Status Tracking**: Real-time display of entity count, relationships, unsaved changes, and zoom level
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-### Frontend
-- **Framework**: React with Vite
-- **Libraries**: 
-  - ReactFlow for visual database design
-  - Mermaid.js for ER diagrams
-  - Axios for API calls
-  - html-to-image for PNG export
+| Component | Technologies |
+|-----------|--------------|
+| **Frontend** | React 19, TypeScript, Vite, Framer Motion, ReactFlow |
+| **UI Library** | Radix UI, TailwindCSS, Lucide Icons, Sonner Toasts |
+| **Backend** | Python 3.8+, FastAPI, Uvicorn ASGI Server |
+| **Database** | SQLite 3, Pydantic validation |
+| **AI/ML** | Google Generative AI (Gemini), Perplexity API support |
+| **Diagrams** | Mermaid.js, html-to-image |
 
-### Backend
-- **Framework**: Python with FastAPI
-- **Database**: SQLite (local)
-- **Libraries**: 
-  - Google Generative AI for LLM integration
-  - sqlite3 for database operations
-  - Pydantic for data validation
-  - Uvicorn for ASGI server
+## 🚀 Quick Start
 
-## 🛠️ Quick Start
-
-> **⚡ For a super quick start, see [QUICK_START.md](QUICK_START.md)**
+> **For detailed setup, see [QUICK_START.md](documentation/QUICK_START.md)**
 
 ### Prerequisites
-- **Node.js** (v16 or higher)
-- **Python** (v3.8 or higher)
-- **npm** or **yarn**
-- **Google Gemini API key** ([Get one here](https://ai.google.dev/))
+- Node.js (v16+)
+- Python (v3.8+)
+- npm or yarn
+- [Google Gemini API key](https://ai.google.dev/) (optional, but recommended)
 
-### 🚀 Installation
+### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/prompt-based-database-builder.git
-   cd prompt-based-database-builder
-   ```
-
-2. **Install frontend dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Install Python dependencies**
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   cd ..
-   ```
-
-4. **Set up environment variables**
-   ```bash
-   # Copy the environment template
-   cp env.template .env
-   
-   # Edit .env and add your Gemini API key
-   GEMINI_API_KEY=your_actual_gemini_api_key_here
-   ```
-   
-   > **⚠️ Important**: 
-   > - The `.env` file is not tracked by git for security reasons. Make sure to create your own `.env` file from the template.
-   > - **Get your Gemini API key** from [Google AI Studio](https://ai.google.dev/)
-   > - **Without a valid API key**, the app will use a limited fallback parser
-
-5. **Start the application**
-   ```bash
-   npm run dev
-   ```
-
-   This starts both frontend (http://localhost:5173) and backend (http://localhost:5000) concurrently.
-
-   > **💡 Pro Tip**: Use `npm run quick-start` to install dependencies and start in one command!
-
-### 🔧 Alternative: Start servers separately
-
+**Method 1: One Command (Fastest)**
 ```bash
-# Terminal 1: Start Python backend first
-cd backend
-python run.py
+npm run quick-start
+```
 
-# Terminal 2: Start React frontend (after backend is running)
-cd frontend
-npm i
+**Method 2: Manual Setup (Recommended)**
+```bash
+# 1. Install dependencies
+npm install
+cd backend && pip install -r requirements.txt && cd ..
+
+# 2. Configure environment (optional for AI features)
+cp env.template .env
+# Edit .env and add: GEMINI_API_KEY=your_actual_api_key_here
+
+# 3. Start application
 npm run dev
 ```
 
-### 🚀 Quick Start (One Command)
+The app will be available at:
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:5000
 
+**Alternative: Separate Terminals**
 ```bash
-# Start both frontend and backend with one command
-npm run dev
-```
+# Terminal 1: Backend
+cd backend && python run.py
 
-> **📖 For detailed setup instructions, see [QUICK_START.md](QUICK_START.md)**
+# Terminal 2: Frontend
+cd frontend && npm i && npm run dev
+```
 
 ## 📖 How to Use
 
-### 1. 🤖 AI-Powered Generation
-1. Click **"🤖 Generate from Prompt"**
-2. Describe your database in natural language:
-   ```
-   Create a hospital database with entities Doctor, Patient, and Appointment. 
-   Doctor has Doctor_ID, Name, Specialization. 
-   Patient has Patient_ID, Name, Age, Address. 
-   Appointment connects Doctor and Patient with Date and Time.
-   ```
-3. Click **"Generate Database"** and watch the magic happen!
+### 1. AI-Powered Generation
+1. Click **"About"** button (Sparkles icon) in the navbar
+2. Describe your database in natural language
+3. Click **"Generate Database"** to create schema instantly
 
-### 2. 🎨 Visual Database Design
-- **Add Tables**: Use **"+ Add Table"** for manual creation
-- **Drag & Drop**: Position tables anywhere on the canvas
-- **Define Structure**: Add columns, set data types, define primary keys
-- **Composite Keys**: Select multiple columns as primary keys
-- **Create Relationships**: Connect tables with foreign keys
-- **Add Data**: Insert sample data to test your schema
-- **Delete Tables**: Click the "×" button on any table to remove it
-
-### 3. 💾 Save & Load Schemas
-- **Save Schema**: Click **"💾 Save to Database"** to save the current canvas state
-- **Load Schema**: Click **"Saved Schemas"** to load previously saved schemas
-- **Reset Database**: Click **"Reset Database"** to clear everything
-
-### 4. 📤 Export & Manage
-- **Export SQL**: Click **"Export SQL"** to view and download generated SQL code
-- **ER Diagrams**: Click **"ER"** to generate Entity Relationship diagrams
-- **Download PNG**: Export diagrams as images
-
-## 🎯 Example Prompts
-
+**Example Prompt:**
 ```
-# Hospital System
-Create a hospital database with entities Doctor, Patient, and Appointment. 
-Doctor has Doctor_ID, Name, Specialization. Patient has Patient_ID, Name, Age, Address. 
-Appointment connects Doctor and Patient with Date and Time.
-
-# E-commerce System
-Create an e-commerce database with Customer, Product, Order, and OrderItem tables. 
-Customers have Customer_ID, Name, Email. Products have Product_ID, Name, Price, Category. 
-Orders connect Customers with Order_Date and Total_Amount. OrderItems connect Orders with Products and include Quantity.
-
-# Library System
-Build a library database with Book, Member, and Loan tables. 
-Books have ISBN, Title, Author, Genre. Members have Member_ID, Name, Email, Phone. 
+Create a library system with Book, Member, and Loan tables.
+Books have ISBN, Title, Author, Genre.
+Members have Member_ID, Name, Email, Phone.
 Loans connect Books and Members with Loan_Date, Return_Date, and Status.
-
-# School Management
-Design a school database with Student, Teacher, Course, and Enrollment tables.
-Students have Student_ID, Name, Grade_Level, Parent_Email. Teachers have Teacher_ID, Name, Subject, Department.
-Courses have Course_ID, Name, Credits, Teacher_ID. Enrollments connect Students and Courses with Grade and Semester.
 ```
 
-## API Endpoints
+### 2. Visual Canvas Design
+- **Add Entities**: Click **"+"** in floating toolbar (left side)
+- **Add Relationships**: Click diamond icon in floating toolbar
+- **Drag & Position**: Click and drag any element
+- **Auto-Layout**: Click layout icon to arrange entities automatically
+- **Toggle Attributes**: Show/hide attribute ovals around entities
+- **Delete**: Select element and click trash icon
 
-### POST /api/generate-database
-Generates SQL schema from natural language input.
+### 3. Entity Configuration
+- **Select Entity**: Click any entity to open right sidebar
+- **Edit Properties**: Modify name, color, and structure
+- **Add Attributes**: Define columns with types, constraints, and keys
+- **Composite Keys**: Select multiple attributes as primary keys
+- **Sample Data**: Add test rows with auto-generated INSERT statements
 
-**Request Body:**
-```json
-{
-  "prompt": "string",
-  "aiProvider": "string"
-}
-```
+### 4. Schema Management
+- **Save**: Click **"Save"** button (requires entities on canvas)
+- **Load**: Click **"Work"** button to browse saved schemas
+- **Export SQL**: Click **"Resource"** button to view/download SQL
+- **Export PNG**: Download visual diagram as image
+- **ER Diagram**: Click **"ERD"** button for Mermaid diagram
 
-**Response:**
-```json
-{
-  "sql": "string",
-  "schema_data": "object",
-  "diagram_data": "object",
-  "success": true,
-  "message": "string"
-}
-```
+### 5. Advanced Tools
+- **SQL Executor**: Settings → Tools → Open SQL Executor
+  - Run custom queries on the database
+  - View results in formatted tables
+  - Test your schema with real SQL
+- **Playground**: Click **"Playground"** (beaker icon) for sample databases
+- **Settings**: Configure theme, database, and app preferences
+- **Status Bar**: Track entities, relationships, changes, and zoom (bottom bar)
 
-### POST /api/execute-sql
-Executes SQL statements on the database.
+## 🔌 API Endpoints
 
-**Request Body:**
-```json
-{
-  "sql": "string"
-}
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | API information and version |
+| GET | `/api/health` | Health check with Gemini availability |
+| POST | `/api/generate-database` | Generate complete database from prompt |
+| POST | `/api/generate-sql` | Generate SQL from natural language |
+| POST | `/api/execute-sql` | Execute SQL statements |
+| GET | `/api/tables` | List all database tables |
+| GET | `/api/tables/{name}/structure` | Get table structure and foreign keys |
+| DELETE | `/api/tables/{name}` | Drop specific table |
+| GET | `/api/generate-drop-sql` | Generate DROP statements for all tables |
+| GET | `/api/generate-drop-sql/{name}` | Generate DROP statement for specific table |
+| GET | `/api/saved-schemas` | Retrieve all saved schemas |
+| POST | `/api/save-schema` | Save schema with metadata |
+| DELETE | `/api/schemas/{id}` | Delete saved schema |
+| POST | `/api/reset-database` | Reset entire database |
 
-**Response:**
-```json
-{
-  "success": true,
-  "results": "array"
-}
-```
+**Interactive API Documentation**: http://localhost:5000/docs (when server running)
 
-### POST /api/save-schema
-Saves a schema to the database.
+**Detailed API Documentation**: See [documentation/BACKEND.md](documentation/BACKEND.md)
 
-**Request Body:**
-```json
-{
-  "prompt": "string",
-  "sql_code": "string",
-  "schema_json": "object"
-}
-```
-
-### GET /api/saved-schemas
-Fetches all previously saved schemas.
-
-**Response:**
-```json
-{
-  "schemas": "array",
-  "success": true,
-  "message": "string"
-}
-```
-
-### DELETE /api/schemas/{id}
-Deletes a specific saved schema by ID.
-
-### POST /api/reset-database
-Resets the entire database.
-
-## Project Structure
+## 📁 Project Structure
 
 ```
-dbms/
-├── frontend/              # Modern React + TypeScript frontend
+dbms2/
+├── frontend/                    # React + TypeScript frontend
 │   ├── src/
-│   │   ├── components/    # React components
-│   │   ├── services/      # API services
-│   │   ├── utils/         # Utility functions
-│   │   └── App.tsx        # Main application
-│   ├── package.json       # Frontend dependencies
-│   └── vite.config.ts     # Vite configuration
-├── backend/               # Backend Python application
+│   │   ├── components/         # UI components
+│   │   │   ├── Canvas.tsx      # Main canvas with drag-and-drop
+│   │   │   ├── Toolbar.tsx     # Top navigation bar
+│   │   │   ├── FloatingToolbar.tsx  # Left sidebar tools
+│   │   │   ├── RightSidebar.tsx     # Entity properties editor
+│   │   │   ├── SQLExecutor.tsx      # Query execution interface
+│   │   │   ├── SettingsModal.tsx    # App settings
+│   │   │   ├── PromptModal.tsx      # AI generation dialog
+│   │   │   ├── SavedSchemasModal.tsx # Schema browser
+│   │   │   ├── MermaidViewer.tsx    # ER diagram renderer
+│   │   │   ├── StatusBar.tsx        # Bottom status display
+│   │   │   └── ui/             # Radix UI components
+│   │   ├── services/           # API client
+│   │   ├── utils/              # Helper functions
+│   │   └── App.tsx             # Main application
+│   └── package.json
+├── backend/                    # Python FastAPI backend
 │   ├── app/
-│   │   └── main.py        # FastAPI application
-│   ├── data/              # SQLite database storage
-│   ├── run.py             # Main entry point
-│   ├── requirements.txt   # Python dependencies
-│   ├── .env.template      # Environment configuration template
-│   └── README.md          # Backend-specific documentation
-├── env.template           # Environment variables template
-├── package.json           # Root scripts and dependencies
-├── QUICK_START.md         # Quick start guide
-└── README.md              # This file
+│   │   └── main.py            # FastAPI app with all endpoints
+│   ├── data/                  # SQLite database storage
+│   ├── run.py                 # Server entry point
+│   └── requirements.txt
+├── documentation/             # All documentation files
+│   ├── QUICK_START.md         # Quick start guide
+│   ├── BACKEND.md             # Backend API documentation
+│   ├── FRONTEND.md            # Frontend component documentation
+│   └── test-integration.md    # Integration testing guide
+├── env.template               # Environment variables template
+├── package.json               # Root scripts
+└── README.md                  # This file
 ```
 
-## Development
+## 💻 Development
 
 ### Available Scripts
 
-- `npm run quick-start` - Install dependencies and start both frontend and backend
-- `npm run dev` - Start both frontend and backend concurrently (recommended)
-- `npm run dev:client` - Start only the frontend (Vite dev server)
-- `npm run start-python` - Start only the Python backend
-- `npm run build` - Build the frontend for production
-- `npm run lint` - Run ESLint
+| Command | Description |
+|---------|-------------|
+| `npm run quick-start` | Install dependencies and start both servers |
+| `npm run dev` | Start both frontend and backend (recommended) |
+| `npm run dev:client` | Start only frontend (Vite dev server) |
+| `npm run start-python` | Start only backend (from root) |
+| `npm run build` | Build frontend for production |
+| `npm run lint` | Run ESLint on frontend |
 
-### 🎯 Quick Commands
+### Environment Variables
 
-```bash
-# Ultra quick: Install and start everything (from project root)
-npm run quick-start
+Create a `.env` file in the project root:
 
-# Just start the application (from project root)
-npm run dev
+```env
+# AI API Configuration
+GEMINI_API_KEY=your_gemini_api_key_here
+PERPLEXITY_API_KEY=your_perplexity_api_key_here  # Optional
 
-# Start only frontend (from project root)
-npm run dev:client
+# Default AI Provider (gemini, perplexity, or fallback)
+DEFAULT_AI_PROVIDER=gemini
 
-# Start only backend (from project root)
-npm run start-python
+# Database Configuration
+DB_PATH=./backend/data/database.sqlite
+
+# Server Configuration
+PORT=5000
 ```
 
-### 🎯 Manual Commands (Recommended)
+**Get API Keys:**
+- Gemini: https://ai.google.dev/
+- Perplexity: https://www.perplexity.ai/settings/api
 
-```bash
-# Backend (from backend/ directory)
-cd backend
-python run.py
-
-# Frontend (from frontend/ directory)
-cd frontend
-npm i
-npm run dev
-```
-
-> **📝 Note**: Manual commands should be run from their respective directories
-
-### Adding New Features
-
-1. **Frontend**: Modify components in `frontend/src/components/`
-2. **Backend**: Add endpoints in `backend/app/main.py`
-3. **Database**: Modify schema in `backend/app/main.py` init_database function
+**Note**: Without API keys, the app uses a basic fallback parser with limited capabilities.
 
 ## 🛠️ Troubleshooting
 
 ### Common Issues
 
-1. **🔑 Gemini API Error**: 
-   - Verify your API key in `.env` file
-   - Get a new key from [Google AI Studio](https://ai.google.dev/)
+**🔑 Gemini API Error**
+- Verify API key in `.env` file (project root)
+- Ensure key format: `GEMINI_API_KEY=AIza...`
+- Get a new key from [Google AI Studio](https://ai.google.dev/)
 
-2. **💾 Database Connection Error**: 
-   - Ensure the `backend/data/` directory exists and is writable
-   - Check file permissions
+**💾 Database Connection Error**
+- Ensure `backend/data/` directory exists (created automatically)
+- Check file permissions on Windows: Right-click folder → Properties → Security
+- Delete `database.sqlite` and restart backend to recreate
 
-3. **🌐 CORS Issues**: 
-   - Backend allows all origins in development
-   - Check if ports 5000 and 5173 are available
+**🌐 CORS Issues**
+- Backend allows origins: `http://localhost:5173` and `http://localhost:3000`
+- Verify frontend is running on port 5173
+- Check browser console for specific CORS error
 
-4. **⚡ Port Conflicts**: 
-   - Change PORT in Python server if port 5000 is in use
-   - Kill existing processes: `taskkill /F /IM python.exe`
+**⚡ Port Already in Use**
+- Change backend port in `backend/app/main.py` (search for `uvicorn.run`)
+- Kill existing processes:
+  - Windows: `taskkill /F /IM python.exe`
+  - Mac/Linux: `lsof -ti:5000 | xargs kill -9`
 
-### 🐛 Debug Mode
+**📦 Module Not Found Errors**
+- Frontend: `cd frontend && npm install`
+- Backend: `cd backend && pip install -r requirements.txt`
+- Try deleting `node_modules` and reinstalling
 
-- **Browser Console**: Press F12 → Console tab for frontend errors
-- **Server Logs**: Check terminal output for backend errors
-- **Network Tab**: F12 → Network to see API requests
+**🎨 Canvas Not Rendering**
+- Hard refresh: Ctrl+Shift+R (Windows) or Cmd+Shift+R (Mac)
+- Check browser console for React errors
+- Ensure both servers are running
+
+### Debug Mode
+
+- **Browser Console**: F12 → Console tab for frontend logs
+- **Network Tab**: F12 → Network to inspect API calls
+- **Backend Logs**: Check terminal running Python server
+- **API Docs**: http://localhost:5000/docs for interactive testing
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions welcome! Please:
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
+2. Create feature branch: `git checkout -b feature/AmazingFeature`
+3. Commit changes: `git commit -m 'Add AmazingFeature'`
+4. Push to branch: `git push origin feature/AmazingFeature`
 5. Open a Pull Request
 
 ## 📄 License
@@ -382,18 +293,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- [Google Gemini AI](https://ai.google.dev/) for natural language processing
-- [React Flow](https://reactflow.dev/) for the visual database designer
-- [Mermaid](https://mermaid-js.github.io/) for ER diagram generation
-- [SQLite](https://sqlite.org/) for database storage
-- [FastAPI](https://fastapi.tiangolo.com/) for the Python backend
-
-## Future Enhancements
-
-- Support for schema updates via conversation
-- Allow CSV uploads for table population
-- Integrate AI explanations of ER diagrams
-- Support for multiple LLM providers
-- User authentication and project management
-- Advanced query generation from natural language
-- Support for PostgreSQL and MySQL databases
+- [Google Gemini AI](https://ai.google.dev/) - Natural language processing
+- [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
+- [React Flow](https://reactflow.dev/) - Visual node-based editor
+- [Mermaid](https://mermaid-js.github.io/) - Diagram generation
+- [Radix UI](https://www.radix-ui.com/) - Accessible component primitives
+- [Framer Motion](https://www.framer.com/motion/) - React animations
