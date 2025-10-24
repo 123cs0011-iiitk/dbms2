@@ -77,6 +77,8 @@ export default function App() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
   const [showAttributes, setShowAttributes] = useState(false);
+  const [showSqlPreview, setShowSqlPreview] = useState(false);
+  const [showSqlSeparators, setShowSqlSeparators] = useState(false);
   const [sqlCode, setSqlCode] = useState('');
   const [zoom, setZoom] = useState(100);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -122,6 +124,11 @@ export default function App() {
 
   const handleZoomReset = useCallback(() => {
     setZoom(100);
+  }, []);
+
+  // SQL Separators handler
+  const toggleSqlSeparators = useCallback(() => {
+    setShowSqlSeparators(prev => !prev);
   }, []);
 
   // Auto-zoom for ER diagram mode
@@ -320,7 +327,7 @@ export default function App() {
     setHasUnsavedChanges(true);
   };
 
-  const generateSQL = () => {
+  const generateSQL = useCallback(() => {
     let sql = '-- Generated SQL DDL\n\n';
     
     entities.forEach(entity => {
@@ -366,7 +373,19 @@ export default function App() {
     });
     
     setSqlCode(sql);
-  };
+  }, [entities]);
+
+  // SQL Preview toggle handler - generates SQL if it doesn't exist
+  const toggleSqlPreview = useCallback(() => {
+    // If no SQL exists yet, generate it first
+    if (!sqlCode && entities.length > 0) {
+      generateSQL();
+      setShowSqlPreview(true);
+    } else {
+      setShowSqlPreview(prev => !prev);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sqlCode, entities]);
 
   // Calculate viewport center for better positioning
   const getViewportCenter = () => {
@@ -424,6 +443,10 @@ export default function App() {
     setRelationships(sample.relationships);
     setSqlCode(sample.sql || '');
     setHasUnsavedChanges(false);
+    // Auto-show SQL preview if sample has SQL
+    if (sample.sql) {
+      setShowSqlPreview(true);
+    }
   };
 
   const handleSaveSchema = async () => {
@@ -523,6 +546,8 @@ export default function App() {
           onToggleRightSidebar={() => setShowRightSidebar(!showRightSidebar)}
           viewMode={viewMode}
           onViewModeChange={handleViewModeChange}
+          showSqlPreview={showSqlPreview}
+          onToggleSqlPreview={toggleSqlPreview}
         />
         
         <div className="flex flex-1 overflow-hidden relative">
@@ -589,9 +614,17 @@ export default function App() {
           relationshipCount={relationships.length}
           hasUnsavedChanges={hasUnsavedChanges}
           zoom={zoom}
+          showSqlPreview={showSqlPreview}
+          onToggleSqlPreview={toggleSqlPreview}
+          hasSqlCode={!!sqlCode}
         />
 
-        <SQLPreview sql={sqlCode} onClose={() => setSqlCode('')} />
+        <SQLPreview 
+          sql={sqlCode} 
+          isVisible={showSqlPreview}
+          onClose={() => setShowSqlPreview(false)} 
+          showSeparators={showSqlSeparators}
+        />
         
         {showPromptModal && (
           <PromptModal
@@ -603,6 +636,10 @@ export default function App() {
               setCurrentPrompt(prompt || 'Generated Schema');
               setShowPromptModal(false);
               setHasUnsavedChanges(false);
+              // Auto-show SQL preview when generated from AI
+              if (sql) {
+                setShowSqlPreview(true);
+              }
             }}
           />
         )}
@@ -636,6 +673,10 @@ export default function App() {
               setSqlCode(sql);
               setShowSavedSchemasModal(false);
               setHasUnsavedChanges(false);
+              // Auto-show SQL preview if loaded schema has SQL
+              if (sql) {
+                setShowSqlPreview(true);
+              }
             }}
           />
         )}

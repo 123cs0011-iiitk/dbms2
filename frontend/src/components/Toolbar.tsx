@@ -22,8 +22,8 @@ type ToolbarProps = {
   onToggleRightSidebar: () => void;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
-  showSqlSeparators: boolean;
-  onToggleSqlSeparators: () => void;
+  showSqlPreview: boolean;
+  onToggleSqlPreview: () => void;
 };
 
 export function Toolbar({
@@ -41,8 +41,8 @@ export function Toolbar({
   onToggleRightSidebar,
   viewMode,
   onViewModeChange,
-  showSqlSeparators,
-  onToggleSqlSeparators,
+  showSqlPreview,
+  onToggleSqlPreview,
 }: ToolbarProps) {
   return (
     <TooltipProvider>
@@ -230,9 +230,9 @@ export function Toolbar({
           <Tooltip>
             <TooltipTrigger asChild>
               <motion.button
-                onClick={onToggleSqlSeparators}
+                onClick={onToggleSqlPreview}
                 className={`h-11 w-11 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center ${
-                  showSqlSeparators
+                  showSqlPreview
                     ? 'bg-gradient-to-br from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white'
                     : 'bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 text-black dark:text-gray-200'
                 }`}
@@ -243,7 +243,7 @@ export function Toolbar({
               </motion.button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="font-medium">
-              <p style={{ fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif' }}>Toggle SQL Separators</p>
+              <p style={{ fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif' }}>Toggle SQL Preview</p>
             </TooltipContent>
           </Tooltip>
           
