@@ -1,6 +1,9 @@
-import { Moon, Sun, Sparkles, Save, Database, ImageIcon, Beaker, PanelRightClose, PanelRightOpen, Settings, Compass } from 'lucide-react';
+import { Moon, Sun, Sparkles, Save, Database, ImageIcon, Beaker, PanelRightClose, PanelRightOpen, Settings, Compass, RotateCcw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
+import { ViewModeToggle } from './ViewModeToggle';
+import { ViewMode } from '../App';
 
 type ToolbarProps = {
   isDarkMode: boolean;
@@ -11,11 +14,14 @@ type ToolbarProps = {
   onOpenSettings: () => void;
   onSaveSchema: () => void;
   onOpenSavedSchemas: () => void;
+  onReset: () => void;
   hasEntities: boolean;
   zoom: number;
   onZoomChange: (zoom: number) => void;
   showRightSidebar: boolean;
   onToggleRightSidebar: () => void;
+  viewMode: ViewMode;
+  onViewModeChange: (mode: ViewMode) => void;
 };
 
 export function Toolbar({
@@ -27,9 +33,12 @@ export function Toolbar({
   onOpenSettings,
   onSaveSchema,
   onOpenSavedSchemas,
+  onReset,
   hasEntities,
   showRightSidebar,
   onToggleRightSidebar,
+  viewMode,
+  onViewModeChange,
 }: ToolbarProps) {
   return (
     <TooltipProvider>
@@ -46,6 +55,11 @@ export function Toolbar({
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
               <Compass className="w-5 h-5 text-white" />
             </div>
+          </div>
+
+          {/* View Mode Toggle */}
+          <div className="mr-4 pr-4 border-r border-gray-300 dark:border-slate-600">
+            <ViewModeToggle mode={viewMode} onModeChange={onViewModeChange} />
           </div>
           
           {/* Navigation Items */}
@@ -162,6 +176,36 @@ export function Toolbar({
               </p>
             </TooltipContent>
           </Tooltip>
+          
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <motion.button
+                className="h-11 w-11 rounded-xl bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg transition-all duration-200 flex items-center justify-center"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <RotateCcw className="w-5 h-5" />
+              </motion.button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Reset Everything?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete all entities, relationships, tables, saved schemas, and settings. This cannot be undone!
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={onReset}
+                  className="!bg-red-600 !hover:bg-red-700 !text-white !inline-flex"
+                  style={{ backgroundColor: '#dc2626', color: 'white' }}
+                >
+                  Yes, Reset Everything
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           
           <Tooltip>
             <TooltipTrigger asChild>

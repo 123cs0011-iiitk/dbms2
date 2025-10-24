@@ -95,6 +95,17 @@ export interface ResetDatabaseResponse {
   message: string;
 }
 
+export interface GenerateLayoutRequest {
+  entities: any[];
+  relationships: any[];
+}
+
+export interface GenerateLayoutResponse {
+  positions: Record<string, { x: number; y: number }>;
+  success: boolean;
+  message: string;
+}
+
 // API Functions
 export const generateDatabase = async (
   prompt: string, 
@@ -202,5 +213,26 @@ export const healthCheck = async (): Promise<boolean> => {
   } catch (error) {
     console.error('Health check failed:', error);
     return false;
+  }
+};
+
+// Generate AI-powered layout positions
+export const generateLayoutPositions = async (
+  entities: any[],
+  relationships: any[]
+): Promise<GenerateLayoutResponse> => {
+  try {
+    const response = await api.post<GenerateLayoutResponse>('/generate-layout', {
+      entities,
+      relationships,
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error('Error generating layout:', error);
+    throw new Error(
+      error.response?.data?.message || 
+      error.message || 
+      'Failed to generate layout'
+    );
   }
 };
