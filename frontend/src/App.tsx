@@ -11,6 +11,8 @@ import { SavedSchemasModal } from './components/SavedSchemasModal';
 import { SQLPreview } from './components/SQLPreview';
 import { StatusBar } from './components/StatusBar';
 import { SettingsModal } from './components/SettingsModal';
+import { AddEntityModal } from './components/AddEntityModal';
+import { AddRelationshipModal } from './components/AddRelationshipModal';
 import { Toaster } from './components/ui/sonner';
 import { saveSchema, resetDatabase } from './services/api';
 import { frontendToBackend } from './utils/schemaTransform';
@@ -75,6 +77,8 @@ export default function App() {
   const [showTestModal, setShowTestModal] = useState(false);
   const [showSavedSchemasModal, setShowSavedSchemasModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showAddEntityModal, setShowAddEntityModal] = useState(false);
+  const [showAddRelationshipModal, setShowAddRelationshipModal] = useState(false);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
   const [showAttributes, setShowAttributes] = useState(false);
   const [showSqlPreview, setShowSqlPreview] = useState(false);
@@ -83,6 +87,15 @@ export default function App() {
   const [zoom, setZoom] = useState(100);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [currentPrompt, setCurrentPrompt] = useState('');
+
+  // Apply dark mode class to document root for portal-rendered components
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   // Auto-zoom to fit all content
   const calculateAndSetZoom = useCallback((items: Array<{ x: number; y: number }>, itemWidth: number = 200, itemHeight: number = 150) => {
@@ -218,7 +231,7 @@ export default function App() {
     setHasUnsavedChanges(true);
   };
 
-  const addEntity = (name: string = 'Entity', attributes?: Attribute[]) => {
+  const addEntity = (name: string = 'Entity', attributes?: Attribute[], connectToEntityId?: string | null, relationshipName?: string, fromCardinality?: string, toCardinality?: string) => {
     const newEntity: Entity = {
       id: `entity-${Date.now()}`,
       name,
@@ -241,29 +254,57 @@ export default function App() {
         },
       ],
     };
-    setEntities([...entities, newEntity]);
+    const updatedEntities = [...entities, newEntity];
+    setEntities(updatedEntities);
+    
+    // If connectToEntityId is provided, create a relationship
+    if (connectToEntityId && relationshipName) {
+      const connectedEntity = updatedEntities.find(e => e.id === connectToEntityId);
+      if (connectedEntity) {
+        const fromCard = fromCardinality || '1';
+        const toCard = toCardinality || 'N';
+        const newRelationship: Relationship = {
+          id: `rel-${Date.now()}`,
+          name: relationshipName,
+          x: (newEntity.x + connectedEntity.x) / 2,
+          y: (newEntity.y + connectedEntity.y) / 2,
+          fromEntityId: connectToEntityId,
+          toEntityId: newEntity.id,
+          cardinality: `${fromCard}:${toCard}`,
+          fromCardinality: fromCard,
+          toCardinality: toCard,
+        };
+        setRelationships([...relationships, newRelationship]);
+      }
+    }
+    
     setHasUnsavedChanges(true);
+    toast.success(`Entity "${name}" added successfully!`);
   };
 
-  const addRelationship = () => {
-    if (entities.length < 2) {
-      alert('You need at least 2 entities to create a relationship');
+  const addRelationship = (name: string, fromEntityId: string, toEntityId: string, fromCardinality: string = '1', toCardinality: string = 'N') => {
+    const fromEntity = entities.find(e => e.id === fromEntityId);
+    const toEntity = entities.find(e => e.id === toEntityId);
+    
+    if (!fromEntity || !toEntity) {
+      toast.error('Selected entities not found');
       return;
     }
     
     const newRelationship: Relationship = {
       id: `rel-${Date.now()}`,
-      name: 'Relates',
-      x: 400,
-      y: 300,
-      fromEntityId: entities[0].id,
-      toEntityId: entities[entities.length - 1].id,
-      cardinality: '1:N',
-      fromCardinality: '1',
-      toCardinality: 'N',
+      name,
+      x: (fromEntity.x + toEntity.x) / 2,
+      y: (fromEntity.y + toEntity.y) / 2,
+      fromEntityId,
+      toEntityId,
+      cardinality: `${fromCardinality}:${toCardinality}`,
+      fromCardinality,
+      toCardinality,
     };
     setRelationships([...relationships, newRelationship]);
     setHasUnsavedChanges(true);
+    toast.success(`Relationship "${name}" added successfully!`);
   };
 
   const updateEntity = (id: string, updates: Partial<Entity>) => {
@@ -527,8 +568,7 @@ export default function App() {
   };
 
   return (
-    <div className={isDarkMode ? 'dark' : ''}>
-      <div className="h-screen flex flex-col bg-gray-50 dark:bg-[#1a1b26] text-gray-900 dark:text-gray-100 transition-colors">
+    <div className="h-screen flex flex-col bg-gray-50 dark:bg-[#1a1b26] text-gray-900 dark:text-gray-100 transition-colors">
         <Toolbar
           isDarkMode={isDarkMode}
           onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
@@ -554,8 +594,14 @@ export default function App() {
           {viewMode === 'er-diagram' && (
             <>
               <FloatingToolbar
-                onAddEntity={addEntity}
-                onAddRelationship={addRelationship}
+                onAddEntity={() => setShowAddEntityModal(true)}
+                onAddRelationship={() => {
+                  if (entities.length < 2) {
+                    toast.error('You need at least 2 entities to create a relationship');
+                    return;
+                  }
+                  setShowAddRelationshipModal(true);
+                }}
                 onAutoLayout={autoLayout}
                 onDelete={() => {
                   if (selectedElement) {
@@ -687,8 +733,29 @@ export default function App() {
           />
         )}
         
+        {showAddEntityModal && (
+          <AddEntityModal
+            entities={entities}
+            onClose={() => setShowAddEntityModal(false)}
+            onAdd={(entityName, connectToEntityId, relationshipName, fromCardinality, toCardinality) => {
+              addEntity(entityName, undefined, connectToEntityId, relationshipName, fromCardinality, toCardinality);
+              setShowAddEntityModal(false);
+            }}
+          />
+        )}
+        
+        {showAddRelationshipModal && (
+          <AddRelationshipModal
+            entities={entities}
+            onClose={() => setShowAddRelationshipModal(false)}
+            onAdd={(relationshipName, fromEntityId, toEntityId, fromCardinality, toCardinality) => {
+              addRelationship(relationshipName, fromEntityId, toEntityId, fromCardinality, toCardinality);
+              setShowAddRelationshipModal(false);
+            }}
+          />
+        )}
+        
         <Toaster />
-      </div>
     </div>
   );
 }
