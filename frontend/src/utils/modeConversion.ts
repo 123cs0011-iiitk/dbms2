@@ -104,9 +104,10 @@ export function entitiesToTables(
         referencesColumn: 'id',
       }));
 
-    // Ensure reasonable positioning for tables with much more spacing
-    const x = entity.x || 100 + (index % 2) * 800; // 2 tables per row with 800px spacing
-    const y = entity.y || 100 + Math.floor(index / 2) * 400; // 400px vertical spacing
+    // Ensure reasonable positioning for tables with improved spacing
+    // Table mode requires more space due to larger node size (500x300px typical)
+    const x = entity.x || 150 + (index % 2) * 900; // Increased to 900px horizontal spacing
+    const y = entity.y || 150 + Math.floor(index / 2) * 500; // Increased to 500px vertical spacing
 
     return {
       id: entity.id,

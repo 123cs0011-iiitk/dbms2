@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Handle, Position } from "reactflow";
+import { formatDisplayName } from "../utils/formatUtils";
 
 type TableColumn = {
   name: string;
@@ -188,7 +189,7 @@ export function TableNode({
                 className="nodrag"
                 style={{ marginRight: 6 }}
               />
-              {col.name}
+              {formatDisplayName(col.name)}
             </label>
           ))}
           {data.primaryKeys && data.primaryKeys.length > 1 && (

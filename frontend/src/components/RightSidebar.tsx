@@ -8,6 +8,7 @@ import { Switch } from './ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { toast } from 'sonner';
 import type { Entity, Attribute, SampleData } from '../App';
+import { formatDisplayName } from '../utils/formatUtils';
 
 type RightSidebarProps = {
   selectedElement: { type: 'entity' | 'relationship' | 'attribute'; id: string } | null;
@@ -293,7 +294,7 @@ export function RightSidebar({
                       <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${entity.attributes.length + 1}, 1fr)` }}>
                         {entity.attributes.map(attr => (
                           <div key={attr.id} className="truncate">
-                            {attr.name}
+                            {formatDisplayName(attr.name)}
                             {attr.isPrimaryKey && <Key className="w-3 h-3 inline ml-1" />}
                           </div>
                         ))}

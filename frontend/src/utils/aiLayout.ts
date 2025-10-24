@@ -13,19 +13,19 @@ export interface LayoutPosition {
 function forceDirectedLayout(
   tables: BackendTable[],
   relationships: BackendRelationship[],
-  iterations: number = 100
+  iterations: number = 150
 ): Record<string, LayoutPosition> {
   const positions: Record<string, LayoutPosition> = {};
   const velocities: Record<string, { vx: number; vy: number }> = {};
   
   // Get viewport center
-  const centerX = typeof window !== 'undefined' ? window.innerWidth / 2 : 600;
-  const centerY = typeof window !== 'undefined' ? window.innerHeight / 2 : 400;
+  const centerX = typeof window !== 'undefined' ? window.innerWidth / 2 : 800;
+  const centerY = typeof window !== 'undefined' ? window.innerHeight / 2 : 500;
   
-  // Initialize random positions around center
+  // Initialize random positions around center with larger radius for better spacing
   tables.forEach((table, index) => {
     const angle = (index * (360 / tables.length)) * (Math.PI / 180);
-    const radius = 200;
+    const radius = Math.max(300, tables.length * 50); // Dynamic radius based on number of entities
     positions[table.name] = {
       x: centerX + Math.cos(angle) * radius + (Math.random() - 0.5) * 100,
       y: centerY + Math.sin(angle) * radius + (Math.random() - 0.5) * 100,
@@ -33,12 +33,12 @@ function forceDirectedLayout(
     velocities[table.name] = { vx: 0, vy: 0 };
   });
   
-  // Physics constants
-  const repulsionStrength = 50000; // Nodes repel each other
-  const attractionStrength = 0.01; // Connected nodes attract
-  const centerAttractionStrength = 0.001; // Pull towards center
-  const damping = 0.85; // Velocity damping
-  const minDistance = 300; // Minimum distance between nodes
+  // Enhanced physics constants for better ER diagram spacing
+  const repulsionStrength = 100000; // Stronger repulsion for better spacing
+  const attractionStrength = 0.008; // Slightly weaker attraction to allow breathing room
+  const centerAttractionStrength = 0.0005; // Weaker center pull for more organic layouts
+  const damping = 0.88; // Slightly higher damping for smoother convergence
+  const minDistance = 450; // Increased minimum distance for cleaner diagrams
   
   // Create adjacency map for relationships
   const connections = new Map<string, Set<string>>();

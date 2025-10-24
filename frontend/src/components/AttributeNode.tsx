@@ -6,6 +6,7 @@ import {
   createCollisionElements,
   type Position
 } from '../utils/layoutUtils';
+import { formatDisplayName } from '../utils/formatUtils';
 
 type AttributeNodeProps = {
   attribute: Attribute;
@@ -194,7 +195,7 @@ export function AttributeNode({
               textShadow: '0 1px 4px rgba(0,0,0,0.3)',
             }}
           >
-            {attribute.name}
+            {formatDisplayName(attribute.name)}
           </span>
         </div>
         

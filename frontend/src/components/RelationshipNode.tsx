@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { Relationship } from '../App';
 import { isPositionValid, createCollisionElements } from '../utils/layoutUtils';
+import { formatDisplayName } from '../utils/formatUtils';
 
 type RelationshipNodeProps = {
   relationship: Relationship;
@@ -140,7 +141,7 @@ export function RelationshipNode({
                   textShadow: '0 2px 10px rgba(0,0,0,0.3)',
                 }}
               >
-                {relationship.name}
+                {formatDisplayName(relationship.name)}
               </span>
             </div>
           </motion.div>
