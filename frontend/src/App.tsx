@@ -1,0 +1,462 @@
+import { useState } from 'react';
+import { Canvas } from './components/Canvas';
+import { Toolbar } from './components/Toolbar';
+import { FloatingToolbar } from './components/FloatingToolbar';
+import { RightSidebar } from './components/RightSidebar';
+import { PromptModal } from './components/PromptModal';
+import { ExportModal } from './components/ExportModal';
+import { TestModal } from './components/TestModal';
+import { SavedSchemasModal } from './components/SavedSchemasModal';
+import { SQLPreview } from './components/SQLPreview';
+import { StatusBar } from './components/StatusBar';
+import { SettingsModal } from './components/SettingsModal';
+import { MermaidViewer } from './components/MermaidViewer';
+import { Toaster } from './components/ui/sonner';
+import { saveSchema } from './services/api';
+import { frontendToBackend } from './utils/schemaTransform';
+import { toast } from 'sonner';
+
+export type Entity = {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  attributes: Attribute[];
+  color?: string;
+  sampleData?: SampleData[];
+};
+
+export type SampleData = {
+  id: string;
+  values: { [key: string]: string };
+};
+
+export type Attribute = {
+  id: string;
+  name: string;
+  type: string;
+  isPrimaryKey?: boolean;
+  isForeignKey?: boolean;
+  isNullable?: boolean;
+  isUnique?: boolean;
+  customX?: number;
+  customY?: number;
+};
+
+export type Relationship = {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  fromEntityId: string;
+  toEntityId: string;
+  cardinality: string;
+  fromCardinality?: string;
+  toCardinality?: string;
+};
+
+export default function App() {
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [entities, setEntities] = useState<Entity[]>([]);
+  const [relationships, setRelationships] = useState<Relationship[]>([]);
+  const [selectedElement, setSelectedElement] = useState<{ type: 'entity' | 'relationship' | 'attribute'; id: string } | null>(null);
+  const [showPromptModal, setShowPromptModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showTestModal, setShowTestModal] = useState(false);
+  const [showSavedSchemasModal, setShowSavedSchemasModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showMermaidModal, setShowMermaidModal] = useState(false);
+  const [showRightSidebar, setShowRightSidebar] = useState(true);
+  const [showAttributes, setShowAttributes] = useState(false);
+  const [sqlCode, setSqlCode] = useState('');
+  const [zoom, setZoom] = useState(100);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [currentPrompt, setCurrentPrompt] = useState('');
+
+  const addEntity = (name: string = 'Entity', attributes?: Attribute[]) => {
+    const newEntity: Entity = {
+      id: `entity-${Date.now()}`,
+      name,
+      x: 300 + Math.random() * 200,
+      y: 200 + Math.random() * 200,
+      color: '#7aa2f7',
+      attributes: attributes || [
+        {
+          id: `attr-${Date.now()}`,
+          name: 'id',
+          type: 'INTEGER',
+          isPrimaryKey: true,
+          isNullable: false,
+        },
+        {
+          id: `attr-${Date.now()}-1`,
+          name: 'name',
+          type: 'VARCHAR(100)',
+          isNullable: false,
+        },
+      ],
+    };
+    setEntities([...entities, newEntity]);
+    setHasUnsavedChanges(true);
+  };
+
+  const addRelationship = () => {
+    if (entities.length < 2) {
+      alert('You need at least 2 entities to create a relationship');
+      return;
+    }
+    
+    const newRelationship: Relationship = {
+      id: `rel-${Date.now()}`,
+      name: 'Relates',
+      x: 400,
+      y: 300,
+      fromEntityId: entities[0].id,
+      toEntityId: entities[entities.length - 1].id,
+      cardinality: '1:N',
+      fromCardinality: '1',
+      toCardinality: 'N',
+    };
+    setRelationships([...relationships, newRelationship]);
+    setHasUnsavedChanges(true);
+  };
+
+  const updateEntity = (id: string, updates: Partial<Entity>) => {
+    setEntities(entities.map(e => e.id === id ? { ...e, ...updates } : e));
+    setHasUnsavedChanges(true);
+  };
+
+  const updateRelationship = (id: string, updates: Partial<Relationship>) => {
+    setRelationships(relationships.map(r => r.id === id ? { ...r, ...updates } : r));
+    setHasUnsavedChanges(true);
+  };
+
+  const updateAttributePosition = (attributeId: string, x: number, y: number) => {
+    setEntities(entities.map(entity => ({
+      ...entity,
+      attributes: entity.attributes?.map(attr => 
+        attr.id === attributeId 
+          ? { ...attr, customX: x, customY: y }
+          : attr
+      ) || []
+    })));
+    setHasUnsavedChanges(true);
+  };
+
+  const deleteEntity = (id: string) => {
+    setEntities(entities.filter(e => e.id !== id));
+    setRelationships(relationships.filter(r => r.fromEntityId !== id && r.toEntityId !== id));
+    if (selectedElement?.type === 'entity' && selectedElement.id === id) {
+      setSelectedElement(null);
+    }
+    setHasUnsavedChanges(true);
+  };
+
+  const deleteRelationship = (id: string) => {
+    setRelationships(relationships.filter(r => r.id !== id));
+    if (selectedElement?.type === 'relationship' && selectedElement.id === id) {
+      setSelectedElement(null);
+    }
+    setHasUnsavedChanges(true);
+  };
+
+  const generateSQL = () => {
+    let sql = '-- Generated SQL DDL\n\n';
+    
+    entities.forEach(entity => {
+      sql += `CREATE TABLE ${entity.name} (\n`;
+      entity.attributes.forEach((attr, idx) => {
+        sql += `  ${attr.name} ${attr.type}`;
+        if (attr.isPrimaryKey) sql += ' PRIMARY KEY';
+        if (attr.isUnique && !attr.isPrimaryKey) sql += ' UNIQUE';
+        if (!attr.isNullable && !attr.isPrimaryKey) sql += ' NOT NULL';
+        if (idx < entity.attributes.length - 1) sql += ',';
+        sql += '\n';
+      });
+      
+      const fkAttributes = entity.attributes.filter(a => a.isForeignKey);
+      if (fkAttributes.length > 0) {
+        fkAttributes.forEach(fk => {
+          sql += `,\n  FOREIGN KEY (${fk.name}) REFERENCES RefTable(id)`;
+        });
+        sql += '\n';
+      }
+      
+      sql += ');\n\n';
+      
+      // Add sample data if available
+      const sampleData = (entity as any).sampleData || [];
+      if (sampleData.length > 0) {
+        sql += `-- Sample data for ${entity.name}\n`;
+        sampleData.forEach((row: any) => {
+          const columnNames = entity.attributes.map(attr => attr.name);
+          const values = columnNames.map(name => {
+            const value = row.values[entity.attributes.find(attr => attr.name === name)?.id || ''];
+            if (value === null || value === undefined || value === '') {
+              return 'NULL';
+            }
+            // Escape single quotes and wrap in quotes
+            return `'${String(value).replace(/'/g, "''")}'`;
+          });
+          
+          sql += `INSERT INTO ${entity.name} (${columnNames.join(', ')}) VALUES (${values.join(', ')});\n`;
+        });
+        sql += '\n';
+      }
+    });
+    
+    setSqlCode(sql);
+  };
+
+  // Calculate viewport center for better positioning
+  const getViewportCenter = () => {
+    if (typeof window !== 'undefined') {
+      return {
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2
+      };
+    }
+    return { x: 500, y: 400 }; // Fallback
+  };
+
+  const autoLayout = () => {
+    if (entities.length === 0) return;
+    
+    const viewportCenter = getViewportCenter();
+    const centerX = viewportCenter.x;
+    const centerY = viewportCenter.y;
+    
+    // Enhanced layout algorithm
+    let radius;
+    if (entities.length === 1) {
+      radius = 0; // Single entity in center
+    } else if (entities.length === 2) {
+      radius = 150; // Two entities side by side
+    } else if (entities.length <= 4) {
+      radius = 300; // Increased spacing for 3-4 entities
+    } else if (entities.length <= 8) {
+      radius = 350; // Increased spacing for 5-8 entities
+    } else {
+      radius = 400; // Increased spacing for many entities
+    }
+    
+    // Position entities in a symmetric circle
+    entities.forEach((entity, index) => {
+      let x, y;
+      
+      if (entities.length === 1) {
+        // Single entity in center
+        x = centerX;
+        y = centerY;
+      } else if (entities.length === 2) {
+        // Two entities side by side
+        x = centerX + (index === 0 ? -radius : radius);
+        y = centerY;
+      } else {
+        // Circular layout with better distribution
+        const angle = (index * (360 / entities.length)) * (Math.PI / 180);
+        x = centerX + Math.cos(angle) * radius;
+        y = centerY + Math.sin(angle) * radius;
+      }
+      
+      updateEntity(entity.id, { x, y });
+    });
+    
+    // Position relationships between entities with better spacing
+    relationships.forEach((rel) => {
+      const fromEntity = entities.find(e => e.id === rel.fromEntityId);
+      const toEntity = entities.find(e => e.id === rel.toEntityId);
+      if (fromEntity && toEntity) {
+        // Position relationship diamond at 1/3 distance from fromEntity to toEntity
+        const x = fromEntity.x + (toEntity.x - fromEntity.x) * 0.33;
+        const y = fromEntity.y + (toEntity.y - fromEntity.y) * 0.33;
+        updateRelationship(rel.id, { x, y });
+      }
+    });
+    
+    // Reset all attribute custom positions when auto-layout is triggered
+    entities.forEach((entity) => {
+      entity.attributes?.forEach((attr) => {
+        updateAttributePosition(attr.id, 0, 0); // Reset to default positioning
+      });
+    });
+  };
+
+  const loadSampleDiagram = (sample: any) => {
+    setEntities(sample.entities);
+    setRelationships(sample.relationships);
+    setSqlCode(sample.sql || '');
+    setHasUnsavedChanges(false);
+  };
+
+  const handleSaveSchema = async () => {
+    if (entities.length === 0) {
+      toast.error('No entities to save. Create some entities first.');
+      return;
+    }
+
+    if (!currentPrompt.trim()) {
+      const schemaName = window.prompt('Enter a name or description for this schema:');
+      if (!schemaName) return;
+      setCurrentPrompt(schemaName);
+    }
+
+    try {
+      // Transform frontend data to backend format
+      const schema_json = frontendToBackend(entities, relationships);
+      
+      // Generate SQL if not exists
+      if (!sqlCode) {
+        generateSQL();
+      }
+      
+      const result = await saveSchema(currentPrompt, sqlCode, schema_json);
+      
+      if (result.success) {
+        toast.success('Schema saved successfully!');
+        setHasUnsavedChanges(false);
+      } else {
+        toast.error(result.message || 'Failed to save schema');
+      }
+    } catch (error: any) {
+      console.error('Error saving schema:', error);
+      toast.error(error.message || 'Failed to save schema');
+    }
+  };
+
+  return (
+    <div className={isDarkMode ? 'dark' : ''}>
+      <div className="h-screen flex flex-col bg-gray-50 dark:bg-[#1a1b26] text-gray-900 dark:text-gray-100 transition-colors">
+        <Toolbar
+          isDarkMode={isDarkMode}
+          onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+          onOpenPrompt={() => setShowPromptModal(true)}
+          onExport={() => setShowExportModal(true)}
+          onOpenTest={() => setShowTestModal(true)}
+          onOpenSettings={() => setShowSettingsModal(true)}
+          onOpenMermaid={() => setShowMermaidModal(true)}
+          onSaveSchema={handleSaveSchema}
+          onOpenSavedSchemas={() => setShowSavedSchemasModal(true)}
+          hasEntities={entities.length > 0}
+          zoom={zoom}
+          onZoomChange={setZoom}
+          showRightSidebar={showRightSidebar}
+          onToggleRightSidebar={() => setShowRightSidebar(!showRightSidebar)}
+        />
+        
+        <div className="flex flex-1 overflow-hidden relative">
+          <FloatingToolbar
+            onAddEntity={addEntity}
+            onAddRelationship={addRelationship}
+            onAutoLayout={autoLayout}
+            onDelete={() => {
+              if (selectedElement) {
+                if (selectedElement.type === 'entity') {
+                  deleteEntity(selectedElement.id);
+                } else {
+                  deleteRelationship(selectedElement.id);
+                }
+              }
+            }}
+            hasSelection={!!selectedElement}
+            showAttributes={showAttributes}
+            onToggleAttributes={() => setShowAttributes(!showAttributes)}
+          />
+          
+          <Canvas
+            entities={entities}
+            relationships={relationships}
+            selectedElement={selectedElement}
+            zoom={zoom}
+            onEntityMove={(id, x, y) => updateEntity(id, { x, y })}
+            onRelationshipMove={(id, x, y) => updateRelationship(id, { x, y })}
+            onAttributeMove={updateAttributePosition}
+            onSelectElement={setSelectedElement}
+            showAttributes={showAttributes}
+          />
+          
+          {showRightSidebar && (
+            <RightSidebar
+              selectedElement={selectedElement}
+              entities={entities}
+              onUpdateEntity={updateEntity}
+              onDeleteEntity={deleteEntity}
+            />
+          )}
+        </div>
+
+        <StatusBar
+          entityCount={entities.length}
+          relationshipCount={relationships.length}
+          hasUnsavedChanges={hasUnsavedChanges}
+          zoom={zoom}
+        />
+
+        <SQLPreview sql={sqlCode} onClose={() => setSqlCode('')} />
+        
+        {showPromptModal && (
+          <PromptModal
+            onClose={() => setShowPromptModal(false)}
+            onGenerate={(entities, rels, sql, prompt) => {
+              setEntities(entities);
+              setRelationships(rels);
+              setSqlCode(sql);
+              setCurrentPrompt(prompt || 'Generated Schema');
+              setShowPromptModal(false);
+              setHasUnsavedChanges(false);
+            }}
+          />
+        )}
+        
+        {showExportModal && (
+          <ExportModal
+            entities={entities}
+            relationships={relationships}
+            sqlCode={sqlCode}
+            onClose={() => setShowExportModal(false)}
+          />
+        )}
+        
+        {showTestModal && (
+          <TestModal
+            onClose={() => setShowTestModal(false)}
+            onLoadSample={(sample) => {
+              loadSampleDiagram(sample);
+              // Delay closing to ensure state updates
+              setTimeout(() => setShowTestModal(false), 0);
+            }}
+          />
+        )}
+        
+        {showSavedSchemasModal && (
+          <SavedSchemasModal
+            onClose={() => setShowSavedSchemasModal(false)}
+            onLoad={(entities, relationships, sql) => {
+              setEntities(entities);
+              setRelationships(relationships);
+              setSqlCode(sql);
+              setShowSavedSchemasModal(false);
+              setHasUnsavedChanges(false);
+            }}
+          />
+        )}
+        
+        {showSettingsModal && (
+          <SettingsModal
+            onClose={() => setShowSettingsModal(false)}
+          />
+        )}
+        
+        {showMermaidModal && (
+          <MermaidViewer
+            entities={entities}
+            relationships={relationships}
+            onClose={() => setShowMermaidModal(false)}
+          />
+        )}
+        
+        <Toaster />
+      </div>
+    </div>
+  );
+}
