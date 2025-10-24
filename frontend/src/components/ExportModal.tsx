@@ -23,38 +23,6 @@ export function ExportModal({ entities, relationships, sqlCode, onClose }: Expor
     toast.success('SQL file downloaded');
   };
 
-  const handleExportMermaid = () => {
-    let mermaid = 'erDiagram\n';
-    
-    entities.forEach(entity => {
-      mermaid += `  ${entity.name} {\n`;
-      entity.attributes.forEach(attr => {
-        const type = attr.type.replace(/\(.*?\)/, '');
-        const key = attr.isPrimaryKey ? 'PK' : attr.isForeignKey ? 'FK' : '';
-        mermaid += `    ${type} ${attr.name} ${key}\n`;
-      });
-      mermaid += `  }\n`;
-    });
-
-    relationships.forEach(rel => {
-      const fromEntity = entities.find(e => e.id === rel.fromEntityId);
-      const toEntity = entities.find(e => e.id === rel.toEntityId);
-      if (fromEntity && toEntity) {
-        const cardinality = rel.cardinality === '1:N' ? '||--o{' : rel.cardinality === '1:1' ? '||--||' : '}o--o{';
-        mermaid += `  ${fromEntity.name} ${cardinality} ${toEntity.name} : "${rel.name}"\n`;
-      }
-    });
-
-    const blob = new Blob([mermaid], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'diagram.mmd';
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Mermaid file downloaded');
-  };
-
   const handleExportJSON = () => {
     const data = JSON.stringify({ entities, relationships }, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
@@ -121,18 +89,6 @@ export function ExportModal({ entities, relationships, sqlCode, onClose }: Expor
             <div className="text-left flex-1">
               <div>Export as SQL</div>
               <div className="text-xs text-gray-500">Download CREATE TABLE statements</div>
-            </div>
-          </Button>
-
-          <Button
-            variant="outline"
-            className="w-full justify-start gap-3 h-auto py-3"
-            onClick={handleExportMermaid}
-          >
-            <FileCode className="w-5 h-5 text-[#bb9af7]" />
-            <div className="text-left flex-1">
-              <div>Export as Mermaid</div>
-              <div className="text-xs text-gray-500">Generate Mermaid diagram syntax</div>
             </div>
           </Button>
 

@@ -13,7 +13,7 @@ A fully-featured visual database designer built with React 19, TypeScript, and m
 | **Framework** | React 19, TypeScript, Vite 6 |
 | **UI Components** | Radix UI (40+ components), TailwindCSS |
 | **Animations** | Framer Motion 12 |
-| **Diagrams** | Mermaid.js, html-to-image |
+| **Diagrams** | html-to-image |
 | **HTTP Client** | Axios |
 | **State Management** | React Hooks (useState, useEffect) |
 | **Icons** | Lucide React |
@@ -82,9 +82,8 @@ Browse and load saved schemas.
 
 #### ExportModal.tsx
 Export SQL and diagrams.
-- **Tabs**: SQL Code, Mermaid Diagram, PNG Export
+- **Tabs**: SQL Code, JSON Export, PNG Export
 - **SQL Tab**: Syntax-highlighted SQL with copy button
-- **Mermaid Tab**: Interactive ER diagram with zoom
 - **PNG Tab**: Download diagram as image file
 - **Features**: Code syntax highlighting, clipboard integration
 
@@ -111,13 +110,6 @@ Interactive SQL query interface.
 - **Output**: Results displayed in formatted table
 - **Features**: Query history, error messages, result export
 - **Access**: Settings → Tools → Open SQL Executor
-
-#### MermaidViewer.tsx
-ER diagram renderer.
-- **Library**: Mermaid.js for diagram generation
-- **Features**: Zoom controls, pan support, export options
-- **Format**: Standard ER diagram notation
-- **Actions**: Copy code, download PNG
 
 ### Node Components
 
@@ -188,7 +180,7 @@ Bottom bar with real-time statistics.
 ### 6. Export & Sharing
 - Export SQL code
 - Download PNG diagrams
-- Copy Mermaid code
+- Export JSON schema
 - Save/load schemas from database
 
 ## 📜 Available Scripts

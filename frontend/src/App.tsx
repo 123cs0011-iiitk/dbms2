@@ -10,7 +10,6 @@ import { SavedSchemasModal } from './components/SavedSchemasModal';
 import { SQLPreview } from './components/SQLPreview';
 import { StatusBar } from './components/StatusBar';
 import { SettingsModal } from './components/SettingsModal';
-import { MermaidViewer } from './components/MermaidViewer';
 import { Toaster } from './components/ui/sonner';
 import { saveSchema } from './services/api';
 import { frontendToBackend } from './utils/schemaTransform';
@@ -65,7 +64,6 @@ export default function App() {
   const [showTestModal, setShowTestModal] = useState(false);
   const [showSavedSchemasModal, setShowSavedSchemasModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [showMermaidModal, setShowMermaidModal] = useState(false);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
   const [showAttributes, setShowAttributes] = useState(false);
   const [sqlCode, setSqlCode] = useState('');
@@ -334,7 +332,6 @@ export default function App() {
           onExport={() => setShowExportModal(true)}
           onOpenTest={() => setShowTestModal(true)}
           onOpenSettings={() => setShowSettingsModal(true)}
-          onOpenMermaid={() => setShowMermaidModal(true)}
           onSaveSchema={handleSaveSchema}
           onOpenSavedSchemas={() => setShowSavedSchemasModal(true)}
           hasEntities={entities.length > 0}
@@ -444,14 +441,6 @@ export default function App() {
         {showSettingsModal && (
           <SettingsModal
             onClose={() => setShowSettingsModal(false)}
-          />
-        )}
-        
-        {showMermaidModal && (
-          <MermaidViewer
-            entities={entities}
-            relationships={relationships}
-            onClose={() => setShowMermaidModal(false)}
           />
         )}
         

@@ -1,4 +1,4 @@
-import { Moon, Sun, Sparkles, Save, Database, ImageIcon, Beaker, PanelRightClose, PanelRightOpen, Settings, GitBranch, Compass } from 'lucide-react';
+import { Moon, Sun, Sparkles, Save, Database, ImageIcon, Beaker, PanelRightClose, PanelRightOpen, Settings, Compass } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
@@ -9,7 +9,6 @@ type ToolbarProps = {
   onExport: () => void;
   onOpenTest: () => void;
   onOpenSettings: () => void;
-  onOpenMermaid: () => void;
   onSaveSchema: () => void;
   onOpenSavedSchemas: () => void;
   hasEntities: boolean;
@@ -26,7 +25,6 @@ export function Toolbar({
   onExport,
   onOpenTest,
   onOpenSettings,
-  onOpenMermaid,
   onSaveSchema,
   onOpenSavedSchemas,
   hasEntities,
@@ -138,28 +136,6 @@ export function Toolbar({
             </TooltipTrigger>
             <TooltipContent side="bottom" className="font-medium">
               <p style={{ fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif' }}>Save Current Schema</p>
-            </TooltipContent>
-          </Tooltip>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <motion.button
-                onClick={onOpenMermaid}
-                disabled={!hasEntities}
-                className={`h-11 px-4 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 ${
-                  hasEntities
-                    ? 'bg-gradient-to-br from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white'
-                    : 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                }`}
-                whileHover={hasEntities ? { scale: 1.05 } : {}}
-                whileTap={hasEntities ? { scale: 0.95 } : {}}
-              >
-                <GitBranch className="w-4 h-4" />
-                <span className="font-medium">ERD</span>
-              </motion.button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="font-medium">
-              <p style={{ fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif' }}>View Mermaid Diagram</p>
             </TooltipContent>
           </Tooltip>
           

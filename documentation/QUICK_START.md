@@ -92,7 +92,6 @@ This will automatically:
 | **Playground** | Beaker | Load sample databases (School, E-Commerce, Hospital) |
 | **Resource** | Image | Export SQL code and PNG diagrams |
 | **Save** | Save | Save current schema to database |
-| **ERD** | Git Branch | View Mermaid ER diagram |
 | **Settings** | Gear | Configure app, theme, and database |
 
 ### Your First Database
