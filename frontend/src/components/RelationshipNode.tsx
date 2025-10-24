@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { Relationship } from '../App';
-import { isPositionValid, createCollisionElements } from '../utils/layoutUtils';
 import { formatDisplayName } from '../utils/formatUtils';
 
 type RelationshipNodeProps = {
@@ -11,9 +10,6 @@ type RelationshipNodeProps = {
   pan: { x: number; y: number };
   onMove: (x: number, y: number) => void;
   onSelect: () => void;
-  entities?: any[];
-  relationships?: any[];
-  attributePositions?: Map<string, any>;
 };
 
 export function RelationshipNode({
@@ -22,10 +18,7 @@ export function RelationshipNode({
   zoom,
   pan,
   onMove,
-  onSelect,
-  entities = [],
-  relationships = [],
-  attributePositions
+  onSelect
 }: RelationshipNodeProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -50,24 +43,8 @@ export function RelationshipNode({
       const newX = (e.clientX - dragStart.x - pan.x) / scale;
       const newY = (e.clientY - dragStart.y - pan.y) / scale;
       
-      const intendedPosition = { x: newX, y: newY };
-      
-      // Create collision elements for hard collision detection
-      const collisionElements = createCollisionElements(entities, relationships, attributePositions);
-      
-      // Check if the intended position is valid (no collisions)
-      const isValid = isPositionValid(
-        relationship.id,
-        'relationship',
-        intendedPosition,
-        collisionElements
-      );
-      
-      // Only update position if it's valid (no collision)
-      if (isValid) {
-        onMove(newX, newY);
-      }
-      // If collision detected, don't update - element stays at last valid position
+      // Allow free movement without collision detection
+      onMove(newX, newY);
     };
 
     const handleMouseUp = () => {
@@ -81,7 +58,7 @@ export function RelationshipNode({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, dragStart, pan, scale, onMove, relationship.id, entities, relationships, attributePositions]);
+  }, [isDragging, dragStart, pan, scale, onMove]);
 
   return (
     <motion.div
@@ -102,6 +79,7 @@ export function RelationshipNode({
       }}
       whileHover={{ scale: scale * 1.05 }}
       transition={{ 
+        delay: (relationship.animationIndex ?? 0) * 0.25, // Slower stagger animation for better visibility
         type: 'spring', 
         stiffness: 300, 
         damping: 25,

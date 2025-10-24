@@ -25,28 +25,33 @@ export function distance(p1: Position, p2: Position): number {
 }
 
 // Get bounds for different element types
+// Note: Padding removed since collision detection is disabled for free movement
 export function getBounds(element: any, position: Position): Bounds {
+  const ENTITY_PADDING = 0; // No padding - allow free overlap
+  const RELATIONSHIP_PADDING = 0; // No padding - allow free overlap
+  const ATTRIBUTE_PADDING = 0; // No padding - allow free overlap
+  
   switch (element.type || 'entity') {
     case 'entity':
       return {
-        x: position.x,
-        y: position.y,
-        width: 180,
-        height: 70,
+        x: position.x - ENTITY_PADDING / 2,
+        y: position.y - ENTITY_PADDING / 2,
+        width: 180 + ENTITY_PADDING,
+        height: 70 + ENTITY_PADDING,
       };
     case 'relationship':
       return {
-        x: position.x,
-        y: position.y,
-        width: 130,
-        height: 130,
+        x: position.x - RELATIONSHIP_PADDING / 2,
+        y: position.y - RELATIONSHIP_PADDING / 2,
+        width: 130 + RELATIONSHIP_PADDING,
+        height: 130 + RELATIONSHIP_PADDING,
       };
     case 'attribute':
       return {
-        x: position.x - 30,
-        y: position.y - 15,
-        width: 60,
-        height: 30,
+        x: position.x - 30 - ATTRIBUTE_PADDING / 2,
+        y: position.y - 15 - ATTRIBUTE_PADDING / 2,
+        width: 60 + ATTRIBUTE_PADDING,
+        height: 30 + ATTRIBUTE_PADDING,
       };
     default:
       return {
@@ -136,6 +141,26 @@ export function createCollisionElements(
   }
   
   return elements;
+}
+
+// Reposition relationships to midpoints between their connected entities
+export function repositionRelationshipsToMidpoints(
+  relationships: any[],
+  entities: any[]
+): any[] {
+  return relationships.map(rel => {
+    const fromEntity = entities.find(e => e.id === rel.fromEntityId);
+    const toEntity = entities.find(e => e.id === rel.toEntityId);
+    
+    if (fromEntity && toEntity) {
+      return {
+        ...rel,
+        x: (fromEntity.x + toEntity.x) / 2,
+        y: (fromEntity.y + toEntity.y) / 2,
+      };
+    }
+    return rel;
+  });
 }
 
 // Simple overlap prevention: find a nearby position that doesn't overlap

@@ -14,11 +14,11 @@ export interface AttributeLayoutConfig {
 }
 
 const DEFAULT_CONFIG: AttributeLayoutConfig = {
-  baseRadius: 150,
-  minRadius: 120,
-  maxRadius: 250,
-  subAttributeRadius: 80,
-  radiusIncrement: 8,
+  baseRadius: 190,
+  minRadius: 150,
+  maxRadius: 290,
+  subAttributeRadius: 110,
+  radiusIncrement: 10,
 };
 
 /**
