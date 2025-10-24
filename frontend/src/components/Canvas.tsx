@@ -53,8 +53,8 @@ export function Canvas({
         } else {
           // Use improved circular position that matches AttributeNode.tsx and attributeLayout.ts
           const total = entity.attributes?.length || 1;
-          const baseRadius = 190 + total * 10; // Match attributeLayout.ts config
-          const radius = Math.min(Math.max(baseRadius, 150), 290); // Match attributeLayout.ts config
+          const baseRadius = 200 + total * 12; // Adjusted for properly proportioned nodes
+          const radius = Math.min(Math.max(baseRadius, 160), 320); // Adjusted for properly proportioned nodes
           
           let angle;
           if (total === 1) {
@@ -67,8 +67,9 @@ export function Canvas({
           }
           
           // Ensure attributes are positioned relative to their parent entity only
-          const x = entity.x + 90 + Math.cos(angle) * radius;
-          const y = entity.y + 35 + Math.sin(angle) * radius;
+          // Adjust for top-left transform origin (subtract half width/height for centering)
+          const x = entity.x + 90 + Math.cos(angle) * radius - 70; // -70 = half of 140px width
+          const y = entity.y + 35 + Math.sin(angle) * radius - 18; // -18 = half of 36px height
           
           attrPosition = { x, y };
         }
@@ -117,10 +118,26 @@ export function Canvas({
         }
         
         // Use the centralized attribute position from allAttributePositions Map
-        const attrPosition = allAttributePositions.get(attr.id);
+        let attrPosition = allAttributePositions.get(attr.id);
         if (!attrPosition) {
-          console.error(`ERROR: No position found for attribute ${attr.id}!`);
-          return; // Skip this connection
+          // Fallback: calculate position on the fly to ensure connection lines always render
+          const total = entity.attributes?.length || 1;
+          const baseRadius = 200 + total * 12;
+          const radius = Math.min(Math.max(baseRadius, 160), 320);
+          
+          let angle;
+          if (total === 1) {
+            angle = Math.PI / 2; // Below entity
+          } else if (total === 2) {
+            angle = index === 0 ? Math.PI / 3 : (2 * Math.PI) / 3;
+          } else {
+            angle = (index * (360 / total)) * (Math.PI / 180);
+          }
+          
+          attrPosition = {
+            x: entity.x + 90 + Math.cos(angle) * radius - 70, // -70 = half of 140px width
+            y: entity.y + 35 + Math.sin(angle) * radius - 18, // -18 = half of 36px height
+          };
         }
         
         // Calculate edge intersection points for cleaner connections
@@ -129,9 +146,11 @@ export function Canvas({
         const entityWidth = 180; // Entity width
         const entityHeight = 70; // Entity height
         
-        // Calculate direction vector from entity center to attribute
-        const dx = attrPosition.x - entityCenterX;
-        const dy = attrPosition.y - entityCenterY;
+        // Calculate direction vector from entity center to attribute center
+        const attrCenterWorldX = attrPosition.x + 70; // +70 = half of 140px width
+        const attrCenterWorldY = attrPosition.y + 18; // +18 = half of 36px height
+        const dx = attrCenterWorldX - entityCenterX;
+        const dy = attrCenterWorldY - entityCenterY;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
         // Normalize direction vector
@@ -153,11 +172,9 @@ export function Canvas({
         // Convert to screen coordinates
         const entityEdgeX = edgeX * scale + pan.x;
         const entityEdgeY = edgeY * scale + pan.y;
-        // Ensure connection goes to the exact center of the attribute oval
-        // The AttributeNode uses translate(-50%, -50%) to center itself at its position
-        // So the connection should go to the position coordinates (which is the center)
-        const attrCenterX = attrPosition.x * scale + pan.x;
-        const attrCenterY = attrPosition.y * scale + pan.y;
+        // Convert attribute center to screen coordinates
+        const attrCenterX = attrCenterWorldX * scale + pan.x;
+        const attrCenterY = attrCenterWorldY * scale + pan.y;
         
         // Determine gradient based on attribute type and entity color
         let gradientId = 'gradient-attr-regular';
@@ -180,7 +197,7 @@ export function Canvas({
                 x2={attrCenterX}
                 y2={attrCenterY}
                 stroke={`url(#${gradientId})`}
-                strokeWidth="4"
+                strokeWidth="6"
                 strokeLinecap="round"
                 opacity="0.3"
                 initial={{ pathLength: 0, opacity: 0 }}
@@ -199,7 +216,7 @@ export function Canvas({
               x2={attrCenterX}
               y2={attrCenterY}
               stroke={`url(#${entityGradientId})`}
-              strokeWidth="4"
+              strokeWidth="5"
               strokeLinecap="round"
               strokeDasharray={attr.isPrimaryKey ? "0" : "6,3"}
               initial={{ pathLength: 0, opacity: 0 }}
