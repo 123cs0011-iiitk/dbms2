@@ -23,7 +23,7 @@ Output: Complete SQL schema with relationships, ER diagrams, and visual canvas!
 | **AI-Powered** | Google Gemini AI integration, Perplexity API support, Intelligent entity recognition, Automatic relationship detection |
 | **Visual Design** | Drag-and-drop canvas, Interactive entity nodes, Relationship diamonds, Custom attribute positioning, Color-coded entities |
 | **Database** | Real SQLite execution, Interactive SQL executor, Sample data management, Table structure inspection, Multi-table operations |
-| **Schema Management** | Save/load schemas, Export SQL files, Export PNG diagrams, Mermaid ER diagrams, Playground with 3 sample databases |
+| **Schema Management** | Save/load schemas, Export SQL files, Export PNG diagrams, Playground with 3 sample databases |
 | **Editing** | Add/delete entities, Composite primary keys, Foreign key relationships, Manual and AI generation, Auto-layout algorithm |
 | **UI/UX** | Dark/light themes, Floating toolbar, Status bar tracking, Right sidebar properties, Settings modal, Real-time validation |
 
@@ -44,7 +44,7 @@ Output: Complete SQL schema with relationships, ER diagrams, and visual canvas!
 | **Backend** | Python 3.8+, FastAPI, Uvicorn ASGI Server |
 | **Database** | SQLite 3, Pydantic validation |
 | **AI/ML** | Google Generative AI (Gemini), Perplexity API support |
-| **Diagrams** | Mermaid.js, html-to-image |
+| **Diagrams** | html-to-image |
 
 ## 🚀 Quick Start
 
@@ -125,7 +125,6 @@ Loans connect Books and Members with Loan_Date, Return_Date, and Status.
 - **Load**: Click **"Work"** button to browse saved schemas
 - **Export SQL**: Click **"Resource"** button to view/download SQL
 - **Export PNG**: Download visual diagram as image
-- **ER Diagram**: Click **"ERD"** button for Mermaid diagram
 
 ### 5. Advanced Tools
 - **SQL Executor**: Settings → Tools → Open SQL Executor
@@ -174,7 +173,6 @@ dbms2/
 │   │   │   ├── SettingsModal.tsx    # App settings
 │   │   │   ├── PromptModal.tsx      # AI generation dialog
 │   │   │   ├── SavedSchemasModal.tsx # Schema browser
-│   │   │   ├── MermaidViewer.tsx    # ER diagram renderer
 │   │   │   ├── StatusBar.tsx        # Bottom status display
 │   │   │   └── ui/             # Radix UI components
 │   │   ├── services/           # API client
@@ -296,6 +294,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Google Gemini AI](https://ai.google.dev/) - Natural language processing
 - [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
 - [React Flow](https://reactflow.dev/) - Visual node-based editor
-- [Mermaid](https://mermaid-js.github.io/) - Diagram generation
 - [Radix UI](https://www.radix-ui.com/) - Accessible component primitives
 - [Framer Motion](https://www.framer.com/motion/) - React animations

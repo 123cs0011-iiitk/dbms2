@@ -53,23 +53,18 @@ npm run dev
 4. Click "Add Row" and enter sample data
 5. Generate SQL to verify INSERT statements are included
 
-### 7. Test Mermaid ERD
-1. With entities on canvas, click "ERD" button
-2. Verify: Visual Mermaid diagram renders
-3. Test "Copy Code" and "Download" functionality
-
-### 8. Test Delete Schema
+### 7. Test Delete Schema
 1. In saved schemas modal, click trash icon
 2. Confirm deletion
 3. Verify: Schema removed from list
 
-### 9. Test Manual Entity Creation
+### 8. Test Manual Entity Creation
 1. Click "Work" button
 2. Add entity manually
 3. Verify: Entity appears on canvas
 4. Test save functionality
 
-### 10. Test Settings & Database Reset
+### 9. Test Settings & Database Reset
 1. Click Settings button (gear icon)
 2. Go to "Database" tab
 3. Test "Reset Database" functionality (use with caution)
