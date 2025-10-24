@@ -1,11 +1,15 @@
-import { Database, Link2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Database, Link2, AlertCircle, CheckCircle2, Code } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 type StatusBarProps = {
   entityCount: number;
   relationshipCount: number;
   hasUnsavedChanges: boolean;
   zoom: number;
+  showSqlPreview: boolean;
+  onToggleSqlPreview: () => void;
+  hasSqlCode: boolean;
 };
 
 export function StatusBar({
@@ -13,10 +17,14 @@ export function StatusBar({
   relationshipCount,
   hasUnsavedChanges,
   zoom,
+  showSqlPreview,
+  onToggleSqlPreview,
+  hasSqlCode,
 }: StatusBarProps) {
   return (
-    <motion.div
-      className="h-10 bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-700 dark:to-slate-800 flex items-center px-6 gap-8 text-white shadow-lg"
+    <TooltipProvider>
+      <motion.div
+        className="h-10 bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-700 dark:to-slate-800 flex items-center px-6 gap-8 text-white shadow-lg"
       initial={{ y: 50, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, delay: 0.2 }}
@@ -73,6 +81,30 @@ export function StatusBar({
       <div className="text-gray-300 font-medium text-sm">
         Zoom: {zoom}%
       </div>
+      
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <motion.button
+            onClick={onToggleSqlPreview}
+            className={`h-7 px-3 rounded-lg transition-all duration-200 flex items-center gap-2 ${
+              showSqlPreview
+                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white'
+                : 'bg-slate-700 hover:bg-slate-600 text-gray-300'
+            }`}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Code className="w-4 h-4" />
+            <span className="text-xs font-medium">SQL</span>
+          </motion.button>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="font-medium">
+          <p style={{ fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif' }}>
+            {hasSqlCode ? 'Toggle SQL Preview' : 'Generate & Show SQL'}
+          </p>
+        </TooltipContent>
+      </Tooltip>
     </motion.div>
+    </TooltipProvider>
   );
 }
