@@ -1,11 +1,25 @@
+# Frontend Documentation
 
-# ERD Builder
+For complete frontend component documentation, see:
 
-A modern Entity Relationship Diagram (ERD) builder application with an intuitive user interface.
+**[documentation/FRONTEND.md](../documentation/FRONTEND.md)**
 
-  ## Running the code
+This folder contains the React + TypeScript frontend for the Database Management System.
 
-  Run `npm i` to install the dependencies.
+## Quick Start
 
-  Run `npm run dev` to start the development server.
-  
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+App will start on http://localhost:5173
+
+## Documentation
+
+All frontend documentation has been moved to the `documentation/` folder:
+- Component architecture and details: [documentation/FRONTEND.md](../documentation/FRONTEND.md)
+- Quick start guide: [documentation/QUICK_START.md](../documentation/QUICK_START.md)
+- Main project README: [README.md](../README.md)
+
