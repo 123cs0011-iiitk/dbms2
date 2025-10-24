@@ -1,0 +1,35 @@
+{
+  "name": "prompt-based-database-builder",
+  "private": true,
+  "version": "1.0.0",
+  "description": "A full-stack web application that converts natural language database descriptions into SQL table definitions and ER diagrams",
+  "keywords": [
+    "database",
+    "sql",
+    "ai",
+    "gemini",
+    "react",
+    "nodejs",
+    "schema",
+    "erd"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:client\" \"npm run start-python\"",
+    "dev:client": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "lint": "cd frontend && npm run lint",
+    "preview": "cd frontend && npm run preview",
+    "start-python": "cd backend && python run.py",
+    "start": "npm run dev",
+    "quick-start": "npm install && npm run dev"
+  },
+  "dependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}
