@@ -39,10 +39,10 @@ export function SavedSchemasModal({ onClose, onLoad }: SavedSchemasModalProps) {
     fetchSchemas();
   }, []);
 
-  const handleLoadSchema = (schema: SavedSchema) => {
+  const handleLoadSchema = async (schema: SavedSchema) => {
     try {
-      // Parse the schema data and transform to frontend format
-      const { entities, relationships } = parseSavedSchema(schema.schema_data);
+      // Parse the schema data and transform to frontend format (now async with AI layout)
+      const { entities, relationships } = await parseSavedSchema(schema.schema_data);
       
       if (entities.length === 0) {
         toast.error('This schema appears to be empty or corrupted');
@@ -118,10 +118,16 @@ export function SavedSchemasModal({ onClose, onLoad }: SavedSchemasModalProps) {
           ) : (
             <div className="space-y-3">
               {schemas.map((schema) => {
-                // Parse schema to get entity/relationship counts
-                const { entities, relationships } = parseSavedSchema(schema.schema_data);
-                const entityCount = entities.length;
-                const relationshipCount = relationships.length;
+                // Parse schema to get entity/relationship counts (simple JSON parse, no layout)
+                let entityCount = 0;
+                let relationshipCount = 0;
+                try {
+                  const schemaData = JSON.parse(schema.schema_data);
+                  entityCount = schemaData.tables?.length || 0;
+                  relationshipCount = schemaData.relationships?.length || 0;
+                } catch (error) {
+                  console.error('Error parsing schema for display:', error);
+                }
 
                 return (
                   <div

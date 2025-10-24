@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Canvas } from './components/Canvas';
+import { TableCanvas } from './components/TableCanvas';
 import { Toolbar } from './components/Toolbar';
 import { FloatingToolbar } from './components/FloatingToolbar';
 import { RightSidebar } from './components/RightSidebar';
@@ -11,9 +12,11 @@ import { SQLPreview } from './components/SQLPreview';
 import { StatusBar } from './components/StatusBar';
 import { SettingsModal } from './components/SettingsModal';
 import { Toaster } from './components/ui/sonner';
-import { saveSchema } from './services/api';
+import { saveSchema, resetDatabase } from './services/api';
 import { frontendToBackend } from './utils/schemaTransform';
 import { toast } from 'sonner';
+import { entitiesToTables, tablesToEntities, TableNode as TableNodeType } from './utils/modeConversion';
+import { Edge } from 'reactflow';
 
 export type Entity = {
   id: string;
@@ -54,10 +57,15 @@ export type Relationship = {
   toCardinality?: string;
 };
 
+export type ViewMode = 'er-diagram' | 'table';
+
 export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('er-diagram');
   const [entities, setEntities] = useState<Entity[]>([]);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
+  const [tableNodes, setTableNodes] = useState<TableNodeType[]>([]);
+  const [tableEdges, setTableEdges] = useState<Edge[]>([]);
   const [selectedElement, setSelectedElement] = useState<{ type: 'entity' | 'relationship' | 'attribute'; id: string } | null>(null);
   const [showPromptModal, setShowPromptModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -70,6 +78,122 @@ export default function App() {
   const [zoom, setZoom] = useState(100);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [currentPrompt, setCurrentPrompt] = useState('');
+
+  // Auto-zoom to fit all content
+  const calculateAndSetZoom = useCallback((items: Array<{ x: number; y: number }>, itemWidth: number = 200, itemHeight: number = 150) => {
+    if (items.length === 0) {
+      setZoom(100);
+      return;
+    }
+
+    // Calculate bounding box
+    const padding = 100;
+    const minX = Math.min(...items.map(item => item.x)) - padding;
+    const maxX = Math.max(...items.map(item => item.x)) + itemWidth + padding;
+    const minY = Math.min(...items.map(item => item.y)) - padding;
+    const maxY = Math.max(...items.map(item => item.y)) + itemHeight + padding;
+
+    const contentWidth = maxX - minX;
+    const contentHeight = maxY - minY;
+
+    // Get viewport dimensions (subtract toolbar and status bar)
+    const viewportWidth = window.innerWidth - 100; // Account for sidebars
+    const viewportHeight = window.innerHeight - 180; // Account for toolbar and status bar
+
+    // Calculate zoom to fit
+    const zoomX = (viewportWidth / contentWidth) * 100;
+    const zoomY = (viewportHeight / contentHeight) * 100;
+    const newZoom = Math.min(zoomX, zoomY, 100); // Don't zoom in beyond 100%
+
+    setZoom(Math.max(25, Math.floor(newZoom))); // Minimum 25% zoom
+  }, []);
+
+  // Auto-zoom for ER diagram mode
+  useEffect(() => {
+    if (viewMode === 'er-diagram' && entities.length > 0) {
+      const timer = setTimeout(() => {
+        calculateAndSetZoom(entities, 250, 200); // Entity width ~250px, height ~200px
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [entities.length, viewMode, calculateAndSetZoom]);
+
+  // Auto-zoom for table mode
+  useEffect(() => {
+    if (viewMode === 'table' && tableNodes.length > 0) {
+      const timer = setTimeout(() => {
+        const tablePositions = tableNodes.map(node => ({ x: node.position.x, y: node.position.y }));
+        calculateAndSetZoom(tablePositions, 500, 300); // Table width ~500px, height ~300px
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [tableNodes.length, viewMode, calculateAndSetZoom]);
+
+  // Handle view mode changes and data conversion
+  useEffect(() => {
+    if (viewMode === 'table' && entities.length > 0) {
+      // Convert entities to tables when switching to table mode
+      const { nodes, edges } = entitiesToTables(entities, relationships);
+      setTableNodes(nodes);
+      setTableEdges(edges);
+    } else if (viewMode === 'er-diagram' && tableNodes.length > 0) {
+      // Convert tables to entities when switching to ER diagram mode
+      const { entities: convertedEntities, relationships: convertedRelationships } = 
+        tablesToEntities(tableNodes, tableEdges);
+      setEntities(convertedEntities);
+      setRelationships(convertedRelationships);
+      
+      // Trigger auto-layout immediately after state update
+      setTimeout(() => {
+        if (convertedEntities.length > 0) {
+          // Calculate viewport center
+          const viewportCenter = {
+            x: window.innerWidth / 2,
+            y: window.innerHeight / 2
+          };
+          const centerX = viewportCenter.x;
+          const centerY = viewportCenter.y;
+          
+          // Position entities in circular layout
+          let radius;
+          if (convertedEntities.length === 1) {
+            radius = 0;
+          } else if (convertedEntities.length === 2) {
+            radius = 200;
+          } else if (convertedEntities.length <= 4) {
+            radius = 300;
+          } else if (convertedEntities.length <= 8) {
+            radius = 350;
+          } else {
+            radius = 400;
+          }
+          
+          const layoutEntities = convertedEntities.map((entity, index) => {
+            let x, y;
+            if (convertedEntities.length === 1) {
+              x = centerX;
+              y = centerY;
+            } else if (convertedEntities.length === 2) {
+              x = centerX + (index === 0 ? -radius : radius);
+              y = centerY;
+            } else {
+              const angle = (index * (360 / convertedEntities.length)) * (Math.PI / 180);
+              x = centerX + Math.cos(angle) * radius;
+              y = centerY + Math.sin(angle) * radius;
+            }
+            return { ...entity, x, y };
+          });
+          
+          setEntities(layoutEntities);
+        }
+      }, 50);
+    }
+  }, [viewMode]);
+
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    setHasUnsavedChanges(true);
+  };
 
   const addEntity = (name: string = 'Entity', attributes?: Attribute[]) => {
     const newEntity: Entity = {
@@ -322,6 +446,48 @@ export default function App() {
     }
   };
 
+  const handleReset = async () => {
+    try {
+      // Call backend to reset database
+      const result = await resetDatabase();
+      
+      if (result.success) {
+        // Reset all application state
+        setEntities([]);
+        setRelationships([]);
+        setTableNodes([]);
+        setTableEdges([]);
+        setSqlCode('');
+        setSelectedElement(null);
+        setCurrentPrompt('');
+        
+        // Reset settings to defaults
+        setViewMode('er-diagram');
+        setZoom(100);
+        setIsDarkMode(false);
+        
+        // Reset UI flags
+        setShowRightSidebar(true);
+        setShowAttributes(false);
+        setHasUnsavedChanges(false);
+        
+        // Close all modals
+        setShowPromptModal(false);
+        setShowExportModal(false);
+        setShowTestModal(false);
+        setShowSavedSchemasModal(false);
+        setShowSettingsModal(false);
+        
+        toast.success('Application reset successfully!');
+      } else {
+        toast.error(result.message || 'Failed to reset application');
+      }
+    } catch (error: any) {
+      console.error('Error resetting application:', error);
+      toast.error(error.message || 'Failed to reset application');
+    }
+  };
+
   return (
     <div className={isDarkMode ? 'dark' : ''}>
       <div className="h-screen flex flex-col bg-gray-50 dark:bg-[#1a1b26] text-gray-900 dark:text-gray-100 transition-colors">
@@ -334,50 +500,67 @@ export default function App() {
           onOpenSettings={() => setShowSettingsModal(true)}
           onSaveSchema={handleSaveSchema}
           onOpenSavedSchemas={() => setShowSavedSchemasModal(true)}
+          onReset={handleReset}
           hasEntities={entities.length > 0}
           zoom={zoom}
           onZoomChange={setZoom}
           showRightSidebar={showRightSidebar}
           onToggleRightSidebar={() => setShowRightSidebar(!showRightSidebar)}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
         />
         
         <div className="flex flex-1 overflow-hidden relative">
-          <FloatingToolbar
-            onAddEntity={addEntity}
-            onAddRelationship={addRelationship}
-            onAutoLayout={autoLayout}
-            onDelete={() => {
-              if (selectedElement) {
-                if (selectedElement.type === 'entity') {
-                  deleteEntity(selectedElement.id);
-                } else {
-                  deleteRelationship(selectedElement.id);
-                }
-              }
-            }}
-            hasSelection={!!selectedElement}
-            showAttributes={showAttributes}
-            onToggleAttributes={() => setShowAttributes(!showAttributes)}
-          />
+          {viewMode === 'er-diagram' && (
+            <>
+              <FloatingToolbar
+                onAddEntity={addEntity}
+                onAddRelationship={addRelationship}
+                onAutoLayout={autoLayout}
+                onDelete={() => {
+                  if (selectedElement) {
+                    if (selectedElement.type === 'entity') {
+                      deleteEntity(selectedElement.id);
+                    } else {
+                      deleteRelationship(selectedElement.id);
+                    }
+                  }
+                }}
+                hasSelection={!!selectedElement}
+                showAttributes={showAttributes}
+                onToggleAttributes={() => setShowAttributes(!showAttributes)}
+              />
+              
+              <Canvas
+                entities={entities}
+                relationships={relationships}
+                selectedElement={selectedElement}
+                zoom={zoom}
+                onEntityMove={(id, x, y) => updateEntity(id, { x, y })}
+                onRelationshipMove={(id, x, y) => updateRelationship(id, { x, y })}
+                onAttributeMove={updateAttributePosition}
+                onSelectElement={setSelectedElement}
+                showAttributes={showAttributes}
+              />
+              
+              {showRightSidebar && (
+                <RightSidebar
+                  selectedElement={selectedElement}
+                  entities={entities}
+                  onUpdateEntity={updateEntity}
+                  onDeleteEntity={deleteEntity}
+                />
+              )}
+            </>
+          )}
           
-          <Canvas
-            entities={entities}
-            relationships={relationships}
-            selectedElement={selectedElement}
-            zoom={zoom}
-            onEntityMove={(id, x, y) => updateEntity(id, { x, y })}
-            onRelationshipMove={(id, x, y) => updateRelationship(id, { x, y })}
-            onAttributeMove={updateAttributePosition}
-            onSelectElement={setSelectedElement}
-            showAttributes={showAttributes}
-          />
-          
-          {showRightSidebar && (
-            <RightSidebar
-              selectedElement={selectedElement}
-              entities={entities}
-              onUpdateEntity={updateEntity}
-              onDeleteEntity={deleteEntity}
+          {viewMode === 'table' && (
+            <TableCanvas
+              nodes={tableNodes}
+              edges={tableEdges}
+              onNodesChange={setTableNodes}
+              onEdgesChange={setTableEdges}
+              zoom={zoom}
             />
           )}
         </div>

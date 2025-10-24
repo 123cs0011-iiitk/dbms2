@@ -150,9 +150,7 @@ export function EntityNode({
               style={{
                 fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif',
                 textShadow: '0 2px 10px rgba(0,0,0,0.3)',
-                textDecoration: hasPrimaryKey ? 'underline' : 'none',
-                textDecorationThickness: '2px',
-                textUnderlineOffset: '4px',
+                textDecoration: 'none',
               }}
             >
               {entity.name}

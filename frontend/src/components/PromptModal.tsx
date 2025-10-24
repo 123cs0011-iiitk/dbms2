@@ -30,8 +30,8 @@ export function PromptModal({ onClose, onGenerate }: PromptModalProps) {
       const result = await generateDatabase(prompt, 'gemini');
       
       if (result.success) {
-        // Transform backend schema to frontend format
-        const { entities, relationships } = backendToFrontend(result.schema_data);
+        // Transform backend schema to frontend format (now async with AI layout)
+        const { entities, relationships } = await backendToFrontend(result.schema_data);
         
         setIsGenerating(false);
         toast.success('Schema generated successfully!');
@@ -55,7 +55,7 @@ export function PromptModal({ onClose, onGenerate }: PromptModalProps) {
             Generate ERD with AI
           </DialogTitle>
           <DialogDescription>
-            Describe your database schema in natural language, and we'll generate the ER diagram and SQL for you.
+            Describe your database schema and we'll generate the ER diagram and SQL for you.
           </DialogDescription>
         </DialogHeader>
 
@@ -68,13 +68,6 @@ export function PromptModal({ onClose, onGenerate }: PromptModalProps) {
               className="min-h-[150px]"
               disabled={isGenerating}
             />
-          </div>
-
-          <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-            <p className="text-sm text-blue-900 dark:text-blue-300">
-              <strong>AI-Powered:</strong> This connects to the Gemini API to generate database schemas from your natural language description. 
-              The AI will analyze your prompt and create appropriate tables, relationships, and SQL code.
-            </p>
           </div>
         </div>
 

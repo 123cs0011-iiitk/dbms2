@@ -1,4 +1,5 @@
 import type { Entity, Attribute, Relationship } from '../App';
+import { generateSmartLayout } from './aiLayout';
 
 // Backend schema types (matching the Python backend)
 export interface BackendTable {
@@ -15,6 +16,7 @@ export interface BackendRelationship {
   fromColumn: string;
   toTable: string;
   toColumn: string;
+  relationshipName?: string; // AI-generated semantic name like "studies", "manages", etc.
 }
 
 export interface BackendSchema {
@@ -51,12 +53,29 @@ const getViewportCenter = () => {
 };
 
 /**
- * Transform backend schema to frontend entities and relationships
+ * Generate a meaningful relationship name from entity names
+ * If AI doesn't provide one, create a simple semantic name
  */
-export function backendToFrontend(schemaData: BackendSchema): {
+function generateRelationshipName(_fromTable: string, _toTable: string, relationshipName?: string): string {
+  if (relationshipName) {
+    return relationshipName;
+  }
+  
+  // Generate a simple semantic name based on table names
+  // Example: "Student" + "Course" -> "enrolls"
+  // Simple fallback: use a generic verb
+  // TODO: Could enhance this to generate semantic names based on table names
+  return 'has';
+}
+
+/**
+ * Transform backend schema to frontend entities and relationships
+ * Now uses AI-powered layout for optimal positioning
+ */
+export async function backendToFrontend(schemaData: BackendSchema): Promise<{
   entities: Entity[];
   relationships: Relationship[];
-} {
+}> {
   if (!schemaData || !schemaData.tables) {
     return { entities: [], relationships: [] };
   }
@@ -64,15 +83,32 @@ export function backendToFrontend(schemaData: BackendSchema): {
   const entities: Entity[] = [];
   const relationships: Relationship[] = [];
 
-  // Convert tables to entities
-  const viewportCenter = getViewportCenter();
-  const radius = Math.min(300, Math.max(200, schemaData.tables.length * 80)); // Dynamic radius
+  // Generate AI-powered layout positions
+  let positions: Record<string, { x: number; y: number }> = {};
+  try {
+    positions = await generateSmartLayout(schemaData.tables, schemaData.relationships);
+  } catch (error) {
+    console.error('Layout generation failed:', error);
+    // Fallback to viewport center if all else fails
+    const viewportCenter = getViewportCenter();
+    schemaData.tables.forEach((table, index) => {
+      const angle = (index * (360 / schemaData.tables.length)) * (Math.PI / 180);
+      const radius = 250;
+      positions[table.name] = {
+        x: viewportCenter.x + Math.cos(angle) * radius,
+        y: viewportCenter.y + Math.sin(angle) * radius,
+      };
+    });
+  }
   
   schemaData.tables.forEach((table, index) => {
-    // Auto-layout entities in a circle centered in viewport
-    const angle = (index * (360 / schemaData.tables.length)) * (Math.PI / 180);
-    const x = viewportCenter.x + Math.cos(angle) * radius;
-    const y = viewportCenter.y + Math.sin(angle) * radius;
+    // Use AI-generated position or fallback
+    const position = positions[table.name] || { 
+      x: 400 + index * 200, 
+      y: 300 + (index % 2) * 200 
+    };
+    const x = position.x;
+    const y = position.y;
 
     // Convert attributes to frontend format
     const attributes: Attribute[] = table.attributes.map((attrName, attrIndex) => {
@@ -124,7 +160,7 @@ export function backendToFrontend(schemaData: BackendSchema): {
 
       const relationship: Relationship = {
         id: `rel-${Date.now()}-${index}`,
-        name: 'Relates',
+        name: generateRelationshipName(rel.fromTable, rel.toTable, rel.relationshipName),
         x,
         y,
         fromEntityId: fromEntity.id,
@@ -201,13 +237,13 @@ export function frontendToBackend(
 /**
  * Parse saved schema data from backend (JSON string) to frontend format
  */
-export function parseSavedSchema(schemaDataString: string): {
+export async function parseSavedSchema(schemaDataString: string): Promise<{
   entities: Entity[];
   relationships: Relationship[];
-} {
+}> {
   try {
     const schemaData = JSON.parse(schemaDataString);
-    return backendToFrontend(schemaData);
+    return await backendToFrontend(schemaData);
   } catch (error) {
     console.error('Error parsing saved schema:', error);
     return { entities: [], relationships: [] };

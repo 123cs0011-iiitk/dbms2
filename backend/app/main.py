@@ -74,6 +74,15 @@ class GenerateDatabaseResponse(BaseModel):
     success: bool
     message: str
 
+class GenerateLayoutRequest(BaseModel):
+    entities: List[Dict[str, Any]]
+    relationships: List[Dict[str, Any]]
+
+class GenerateLayoutResponse(BaseModel):
+    positions: Dict[str, Dict[str, float]]  # entity_name -> {x, y}
+    success: bool
+    message: str
+
 class SavedSchema(BaseModel):
     id: int
     prompt: str
@@ -382,7 +391,8 @@ Return ONLY a valid JSON object with this exact structure:
       "fromTable": "Table1",
       "fromColumn": "Column1", 
       "toTable": "Table2",
-      "toColumn": "Column2"
+      "toColumn": "Column2",
+      "relationshipName": "verb"
     }
   ]
 }
@@ -397,6 +407,7 @@ Rules:
 7. Be generous with attributes - better to include more than miss important ones
 8. For many-to-many relationships, create junction tables (e.g., Enrollment, Course_Assignment)
 9. Include all relevant attributes for each entity based on the context
+10. **CRITICAL**: For each relationship, provide a "relationshipName" field with a semantic 1-2 word verb/action that describes the relationship (e.g., "enrolls", "teaches", "manages", "treats", "belongs_to", "contains", "studies", "has", "owns")
 
 DETAILED EXAMPLES:
 
@@ -423,13 +434,15 @@ Expected Output:
       "fromTable": "Training_Session",
       "fromColumn": "Member_ID",
       "toTable": "Member",
-      "toColumn": "Member_ID"
+      "toColumn": "Member_ID",
+      "relationshipName": "books"
     },
     {
       "fromTable": "Training_Session",
       "fromColumn": "Trainer_ID",
       "toTable": "Trainer",
-      "toColumn": "Trainer_ID"
+      "toColumn": "Trainer_ID",
+      "relationshipName": "conducts"
     }
   ]
 }
@@ -461,13 +474,15 @@ Expected Output:
       "fromTable": "Borrowing",
       "fromColumn": "Student_ID",
       "toTable": "Student",
-      "toColumn": "Student_ID"
+      "toColumn": "Student_ID",
+      "relationshipName": "borrows"
     },
     {
       "fromTable": "Borrowing",
       "fromColumn": "ISBN",
       "toTable": "Book",
-      "toColumn": "ISBN"
+      "toColumn": "ISBN",
+      "relationshipName": "includes"
     }
   ]
 }
@@ -638,6 +653,61 @@ def generate_sql_with_fallback(prompt: str) -> str:
   description TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );"""
+
+def generate_layout_with_ai(entities: List[Dict], relationships: List[Dict]) -> Optional[Dict[str, Dict[str, float]]]:
+    """Generate optimal layout positions using AI"""
+    if not GEMINI_AVAILABLE:
+        return None
+    
+    try:
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        
+        # Create a description of the graph structure
+        entity_names = [e.get('name', f"Entity{i}") for i, e in enumerate(entities)]
+        rel_descriptions = []
+        for rel in relationships:
+            from_name = rel.get('fromTable', rel.get('fromEntityId', 'Unknown'))
+            to_name = rel.get('toTable', rel.get('toEntityId', 'Unknown'))
+            rel_name = rel.get('relationshipName', rel.get('name', 'relates'))
+            rel_descriptions.append(f"{from_name} --{rel_name}--> {to_name}")
+        
+        system_prompt = f"""You are a graph visualization expert. Given entities and their relationships, generate optimal 2D positions for an ER diagram.
+
+Entities: {', '.join(entity_names)}
+
+Relationships:
+{chr(10).join(rel_descriptions)}
+
+Generate optimal X,Y coordinates where:
+1. Related entities are placed near each other (but not overlapping)
+2. Minimum spacing between entities: 300px
+3. Create hierarchical layout if applicable (parent entities on top/left)
+4. Minimize edge crossings
+5. Create visually balanced arrangement
+6. Viewport center should be around (600, 400)
+7. Spread entities across at least 400-800px range
+
+Return ONLY a JSON object with this structure:
+{{
+  "EntityName1": {{"x": 400, "y": 300}},
+  "EntityName2": {{"x": 700, "y": 300}},
+  "EntityName3": {{"x": 550, "y": 600}}
+}}
+
+CRITICAL: Return ONLY the JSON, no explanations, no markdown formatting."""
+
+        response = model.generate_content(system_prompt)
+        ai_response = response.text
+        
+        # Clean and parse JSON response
+        cleaned_response = ai_response.replace("```json", "").replace("```", "").strip()
+        positions = json.loads(cleaned_response)
+        
+        return positions
+        
+    except Exception as e:
+        print(f"AI layout generation failed: {e}")
+        return None
 
 # API Routes
 @app.get("/")
@@ -996,6 +1066,32 @@ async def generate_drop_sql():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/generate-layout", response_model=GenerateLayoutResponse)
+async def generate_layout(request: GenerateLayoutRequest):
+    """Generate optimal layout positions for entities using AI"""
+    try:
+        positions = generate_layout_with_ai(request.entities, request.relationships)
+        
+        if positions:
+            return GenerateLayoutResponse(
+                positions=positions,
+                success=True,
+                message="Layout generated successfully"
+            )
+        else:
+            return GenerateLayoutResponse(
+                positions={},
+                success=False,
+                message="AI layout generation not available, using fallback"
+            )
+    except Exception as e:
+        print(f"Error generating layout: {e}")
+        return GenerateLayoutResponse(
+            positions={},
+            success=False,
+            message=f"Error: {str(e)}"
+        )
 
 @app.get("/api/generate-drop-sql/{table_name}")
 async def generate_drop_sql_for_table(table_name: str):
