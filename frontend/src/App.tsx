@@ -14,6 +14,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { Toaster } from './components/ui/sonner';
 import { saveSchema, resetDatabase } from './services/api';
 import { frontendToBackend } from './utils/schemaTransform';
+import { calculateTreeLayout } from './utils/treeLayout';
 import { toast } from 'sonner';
 import { entitiesToTables, tablesToEntities, TableNode as TableNodeType } from './utils/modeConversion';
 import { Edge } from 'reactflow';
@@ -26,6 +27,7 @@ export type Entity = {
   attributes: Attribute[];
   color?: string;
   sampleData?: SampleData[];
+  animationIndex?: number;
 };
 
 export type SampleData = {
@@ -55,6 +57,7 @@ export type Relationship = {
   cardinality: string;
   fromCardinality?: string;
   toCardinality?: string;
+  animationIndex?: number;
 };
 
 export type ViewMode = 'er-diagram' | 'table';
@@ -244,7 +247,29 @@ export default function App() {
   };
 
   const updateEntity = (id: string, updates: Partial<Entity>) => {
-    setEntities(entities.map(e => e.id === id ? { ...e, ...updates } : e));
+    const updatedEntities = entities.map(e => e.id === id ? { ...e, ...updates } : e);
+    setEntities(updatedEntities);
+    
+    // Auto-reposition relationships connected to this entity
+    if (updates.x !== undefined || updates.y !== undefined) {
+      const updatedRelationships = relationships.map(rel => {
+        if (rel.fromEntityId === id || rel.toEntityId === id) {
+          const fromEntity = updatedEntities.find(e => e.id === rel.fromEntityId);
+          const toEntity = updatedEntities.find(e => e.id === rel.toEntityId);
+          
+          if (fromEntity && toEntity) {
+            return {
+              ...rel,
+              x: (fromEntity.x + toEntity.x) / 2,
+              y: (fromEntity.y + toEntity.y) / 2,
+            };
+          }
+        }
+        return rel;
+      });
+      setRelationships(updatedRelationships);
+    }
+    
     setHasUnsavedChanges(true);
   };
 
@@ -344,64 +369,41 @@ export default function App() {
   const autoLayout = () => {
     if (entities.length === 0) return;
     
+    // Use sequential compact layout (same as initial import)
     const viewportCenter = getViewportCenter();
-    const centerX = viewportCenter.x;
-    const centerY = viewportCenter.y;
     
-    // Enhanced layout algorithm
-    let radius;
-    if (entities.length === 1) {
-      radius = 0; // Single entity in center
-    } else if (entities.length === 2) {
-      radius = 150; // Two entities side by side
-    } else if (entities.length <= 4) {
-      radius = 300; // Increased spacing for 3-4 entities
-    } else if (entities.length <= 8) {
-      radius = 350; // Increased spacing for 5-8 entities
-    } else {
-      radius = 400; // Increased spacing for many entities
-    }
+    // Calculate optimal positions using sequential layout - no overlaps
+    const newPositions = calculateTreeLayout(entities, relationships, viewportCenter);
     
-    // Position entities in a symmetric circle
-    entities.forEach((entity, index) => {
-      let x, y;
-      
-      if (entities.length === 1) {
-        // Single entity in center
-        x = centerX;
-        y = centerY;
-      } else if (entities.length === 2) {
-        // Two entities side by side
-        x = centerX + (index === 0 ? -radius : radius);
-        y = centerY;
-      } else {
-        // Circular layout with better distribution
-        const angle = (index * (360 / entities.length)) * (Math.PI / 180);
-        x = centerX + Math.cos(angle) * radius;
-        y = centerY + Math.sin(angle) * radius;
+    // Update entity positions
+    const updatedEntities = entities.map(entity => {
+      const newPos = newPositions.get(entity.id);
+      if (newPos) {
+        return { ...entity, x: newPos.x, y: newPos.y };
       }
-      
-      updateEntity(entity.id, { x, y });
+      return entity;
     });
     
-    // Position relationships between entities with better spacing
-    relationships.forEach((rel) => {
-      const fromEntity = entities.find(e => e.id === rel.fromEntityId);
-      const toEntity = entities.find(e => e.id === rel.toEntityId);
+    setEntities(updatedEntities);
+    
+    // Recalculate relationship positions at midpoints
+    const updatedRelationships = relationships.map(rel => {
+      const fromEntity = updatedEntities.find(e => e.id === rel.fromEntityId);
+      const toEntity = updatedEntities.find(e => e.id === rel.toEntityId);
+      
       if (fromEntity && toEntity) {
-        // Position relationship diamond at 1/3 distance from fromEntity to toEntity
-        const x = fromEntity.x + (toEntity.x - fromEntity.x) * 0.33;
-        const y = fromEntity.y + (toEntity.y - fromEntity.y) * 0.33;
-        updateRelationship(rel.id, { x, y });
+        return {
+          ...rel,
+          x: (fromEntity.x + toEntity.x) / 2,
+          y: (fromEntity.y + toEntity.y) / 2
+        };
       }
+      return rel;
     });
     
-    // Reset all attribute custom positions when auto-layout is triggered
-    entities.forEach((entity) => {
-      entity.attributes?.forEach((attr) => {
-        updateAttributePosition(attr.id, 0, 0); // Reset to default positioning
-      });
-    });
+    setRelationships(updatedRelationships);
+    
+    toast.success('Layout optimized!');
   };
 
   const loadSampleDiagram = (sample: any) => {

@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import { Key } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Entity } from '../App';
-import { isPositionValid, createCollisionElements } from '../utils/layoutUtils';
 import { formatDisplayName } from '../utils/formatUtils';
 
 type EntityNodeProps = {
@@ -12,9 +11,6 @@ type EntityNodeProps = {
   pan: { x: number; y: number };
   onMove: (x: number, y: number) => void;
   onSelect: () => void;
-  entities?: any[];
-  relationships?: any[];
-  attributePositions?: Map<string, any>;
 };
 
 export function EntityNode({ 
@@ -23,10 +19,7 @@ export function EntityNode({
   zoom, 
   pan, 
   onMove, 
-  onSelect,
-  entities = [],
-  relationships = [],
-  attributePositions
+  onSelect
 }: EntityNodeProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -52,24 +45,8 @@ export function EntityNode({
       const newX = (e.clientX - dragStart.x - pan.x) / scale;
       const newY = (e.clientY - dragStart.y - pan.y) / scale;
       
-      const intendedPosition = { x: newX, y: newY };
-      
-      // Create collision elements for hard collision detection
-      const collisionElements = createCollisionElements(entities, relationships, attributePositions);
-      
-      // Check if the intended position is valid (no collisions)
-      const isValid = isPositionValid(
-        entity.id,
-        'entity',
-        intendedPosition,
-        collisionElements
-      );
-      
-      // Only update position if it's valid (no collision)
-      if (isValid) {
-        onMove(newX, newY);
-      }
-      // If collision detected, don't update - element stays at last valid position
+      // Allow free movement without collision detection
+      onMove(newX, newY);
     };
 
     const handleMouseUp = () => {
@@ -83,7 +60,7 @@ export function EntityNode({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, dragStart, pan, scale, onMove, entity.id, entities, relationships, attributePositions]);
+  }, [isDragging, dragStart, pan, scale, onMove]);
 
   const gradientColors = {
     '#7aa2f7': 'from-blue-400 to-blue-600',
@@ -115,6 +92,7 @@ export function EntityNode({
       }}
       whileHover={{ scale: scale * 1.02 }}
       transition={{ 
+        delay: (entity.animationIndex ?? 0) * 0.25, // Slower stagger animation for better visibility
         type: 'spring', 
         stiffness: 300, 
         damping: 25,

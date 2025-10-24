@@ -1,11 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { Attribute } from '../App';
-import { 
-  isPositionValid,
-  createCollisionElements,
-  type Position
-} from '../utils/layoutUtils';
 import { formatDisplayName } from '../utils/formatUtils';
 
 type AttributeNodeProps = {
@@ -20,9 +15,6 @@ type AttributeNodeProps = {
   onMove?: (attributeId: string, x: number, y: number) => void;
   onSelect?: () => void;
   isSelected?: boolean;
-  allAttributePositions?: Map<string, Position>;
-  entities?: any[];
-  relationships?: any[];
 };
 
 export function AttributeNode({
@@ -35,10 +27,7 @@ export function AttributeNode({
   pan,
   onMove,
   onSelect,
-  isSelected = false,
-  allAttributePositions,
-  entities = [],
-  relationships = [],
+  isSelected = false
 }: AttributeNodeProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -60,8 +49,8 @@ export function AttributeNode({
     }
     
     // Use improved circular position that matches Canvas.tsx logic
-    const baseRadius = Math.max(60, 50 + total * 5); // Much smaller radius to keep closer to parent
-    const radius = Math.min(baseRadius, 100); // Reduced max radius
+    const baseRadius = 190 + total * 10; // Match attributeLayout.ts config
+    const radius = Math.min(Math.max(baseRadius, 150), 290); // Match attributeLayout.ts config
     
     let angle;
     if (total === 1) {
@@ -99,25 +88,9 @@ export function AttributeNode({
       const rawX = (e.clientX - dragStart.x - pan.x) / scale;
       const rawY = (e.clientY - dragStart.y - pan.y) / scale;
       
-      const intendedPosition = { x: rawX, y: rawY };
-      
-      // Create collision elements for hard collision detection
-      const collisionElements = createCollisionElements(entities, relationships, allAttributePositions);
-      
-      // Check if the intended position is valid (no collisions)
-      const isValid = isPositionValid(
-        attribute.id,
-        'attribute',
-        intendedPosition,
-        collisionElements
-      );
-      
-      // Only update position if it's valid (no collision)
-      if (isValid) {
-        setCustomPosition(intendedPosition);
-        onMove(attribute.id, intendedPosition.x, intendedPosition.y);
-      }
-      // If collision detected, don't update - element stays at last valid position
+      // Allow free movement without collision detection
+      setCustomPosition({ x: rawX, y: rawY });
+      onMove(attribute.id, rawX, rawY);
     };
 
     const handleMouseUp = () => {
@@ -131,7 +104,7 @@ export function AttributeNode({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, dragStart, pan, scale, onMove, attribute.id, allAttributePositions, entities, relationships]);
+  }, [isDragging, dragStart, pan, scale, onMove, attribute.id]);
 
   const getGradient = () => {
     if (attribute.isPrimaryKey) {

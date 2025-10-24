@@ -51,10 +51,10 @@ export function Canvas({
         if (attr.customX !== undefined && attr.customY !== undefined) {
           attrPosition = { x: attr.customX, y: attr.customY };
         } else {
-          // Use improved circular position that ensures attributes stay close to their parent entity
+          // Use improved circular position that matches AttributeNode.tsx and attributeLayout.ts
           const total = entity.attributes?.length || 1;
-          const baseRadius = Math.max(60, 50 + total * 5); // Much smaller radius to keep closer to parent
-          const radius = Math.min(baseRadius, 100); // Reduced max radius
+          const baseRadius = 190 + total * 10; // Match attributeLayout.ts config
+          const radius = Math.min(Math.max(baseRadius, 150), 290); // Match attributeLayout.ts config
           
           let angle;
           if (total === 1) {
@@ -74,16 +74,6 @@ export function Canvas({
         }
         
         positions.set(attr.id, attrPosition);
-        
-        // Also add positions for sub-attributes if this is a composite attribute
-        if (attr.isComposite && attr.subAttributes) {
-          attr.subAttributes.forEach((subAttr) => {
-            if (subAttr.customX !== undefined && subAttr.customY !== undefined) {
-              positions.set(subAttr.id, { x: subAttr.customX, y: subAttr.customY });
-              seenIds.add(subAttr.id);
-            }
-          });
-        }
       });
     });
     
@@ -109,61 +99,6 @@ export function Canvas({
 
   const handleMouseUp = () => {
     setIsPanning(false);
-  };
-
-  // Draw connections from composite attributes to sub-attributes
-  const renderSubAttributeConnections = () => {
-    if (!showAttributes) return null;
-    const scale = zoom / 100;
-    
-    const connections: React.ReactElement[] = [];
-    
-    entities.forEach((entity) => {
-      entity.attributes?.forEach((attr) => {
-        // Only process composite attributes with sub-attributes
-        if (!attr.isComposite || !attr.subAttributes || attr.subAttributes.length === 0) {
-          return;
-        }
-        
-        const parentPosition = allAttributePositions.get(attr.id);
-        if (!parentPosition) return;
-        
-        const parentX = parentPosition.x * scale + pan.x;
-        const parentY = parentPosition.y * scale + pan.y;
-        
-        // Draw connections to each sub-attribute
-        attr.subAttributes.forEach((subAttr, subIndex) => {
-          const subPosition = allAttributePositions.get(subAttr.id);
-          if (!subPosition) return;
-          
-          const subX = subPosition.x * scale + pan.x;
-          const subY = subPosition.y * scale + pan.y;
-          
-          connections.push(
-            <motion.line
-              key={`sub-conn-${attr.id}-${subAttr.id}`}
-              x1={parentX}
-              y1={parentY}
-              x2={subX}
-              y2={subY}
-              stroke="url(#gradient-composite)"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeDasharray="4,2"
-              initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 0.7 }}
-              transition={{ 
-                duration: 0.8, 
-                delay: subIndex * 0.1 + 0.3,
-                ease: "easeOut"
-              }}
-            />
-          );
-        });
-      });
-    });
-    
-    return connections;
   };
 
   // Draw animated attribute connections with enhanced styling
@@ -283,7 +218,7 @@ export function Canvas({
     return connections;
   };
 
-  // Draw animated relationship connections
+  // Draw animated relationship connections with straight lines
   const renderRelationshipConnections = () => {
     const scale = zoom / 100;
     
@@ -307,7 +242,7 @@ export function Canvas({
 
       return (
         <g key={rel.id}>
-          {/* Animated gradient line from fromEntity to relationship diamond */}
+          {/* Straight line from fromEntity to relationship diamond */}
           <motion.line
             x1={fromX}
             y1={fromY}
@@ -321,7 +256,7 @@ export function Canvas({
             transition={{ duration: 0.8, delay: relIndex * 0.2 }}
           />
           
-          {/* Animated gradient line from relationship diamond to toEntity */}
+          {/* Straight line from relationship diamond to toEntity */}
           <motion.line
             x1={relX}
             y1={relY}
@@ -335,15 +270,15 @@ export function Canvas({
             transition={{ duration: 0.8, delay: relIndex * 0.2 + 0.3 }}
           />
           
-          {/* Cardinality labels with backgrounds */}
+          {/* Cardinality labels with backgrounds - centered at midpoint */}
           <motion.g
             initial={{ opacity: 0, scale: 0 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: relIndex * 0.2 + 0.6 }}
           >
             <rect
-              x={fromX + (relX - fromX) * 0.25 - 15}
-              y={fromY + (relY - fromY) * 0.25 - 15}
+              x={fromX + (relX - fromX) * 0.5 - 15}
+              y={fromY + (relY - fromY) * 0.5 - 15}
               width="30"
               height="24"
               rx="8"
@@ -352,8 +287,8 @@ export function Canvas({
               opacity="0.95"
             />
             <text
-              x={fromX + (relX - fromX) * 0.25}
-              y={fromY + (relY - fromY) * 0.25}
+              x={fromX + (relX - fromX) * 0.5}
+              y={fromY + (relY - fromY) * 0.5}
               textAnchor="middle"
               dominantBaseline="middle"
               className="fill-blue-600 dark:fill-blue-400 font-bold"
@@ -372,8 +307,8 @@ export function Canvas({
             transition={{ delay: relIndex * 0.2 + 0.7 }}
           >
             <rect
-              x={relX + (toX - relX) * 0.75 - 15}
-              y={relY + (toY - relY) * 0.75 - 15}
+              x={relX + (toX - relX) * 0.5 - 15}
+              y={relY + (toY - relY) * 0.5 - 15}
               width="30"
               height="24"
               rx="8"
@@ -382,8 +317,8 @@ export function Canvas({
               opacity="0.95"
             />
             <text
-              x={relX + (toX - relX) * 0.75}
-              y={relY + (toY - relY) * 0.75}
+              x={relX + (toX - relX) * 0.5}
+              y={relY + (toY - relY) * 0.5}
               textAnchor="middle"
               dominantBaseline="middle"
               className="fill-purple-600 dark:fill-purple-400 font-bold"
@@ -450,10 +385,6 @@ export function Canvas({
             <stop offset="0%" stopColor="#10b981" stopOpacity="0.8" />
             <stop offset="100%" stopColor="#059669" stopOpacity="0.8" />
           </linearGradient>
-          <linearGradient id="gradient-composite" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.6" />
-          </linearGradient>
           
           {/* Entity-specific gradients for better visual association */}
           {entities.map(entity => (
@@ -464,7 +395,6 @@ export function Canvas({
           ))}
         </defs>
         {renderAttributeConnections()}
-        {renderSubAttributeConnections()}
         {renderRelationshipConnections()}
       </svg>
 
@@ -472,49 +402,20 @@ export function Canvas({
       {showAttributes && entities.map((entity) => (
         <React.Fragment key={`entity-attrs-${entity.id}`}>
           {entity.attributes?.map((attr, index) => (
-            <React.Fragment key={attr.id}>
-              <AttributeNode
-                attribute={attr}
-                entityId={entity.id}
-                entityX={entity.x}
-                entityY={entity.y}
-                index={index}
-                total={entity.attributes?.length || 1}
-                zoom={zoom}
-                pan={pan}
-                onMove={onAttributeMove}
-                onSelect={() => onSelectElement({ type: 'attribute', id: attr.id })}
-                isSelected={selectedElement?.type === 'attribute' && selectedElement.id === attr.id}
-                allAttributePositions={allAttributePositions}
-                entities={entities}
-                relationships={relationships}
-              />
-              {/* Render sub-attributes for composite attributes */}
-              {attr.isComposite && attr.subAttributes && attr.subAttributes.map((subAttr, subIndex) => {
-                const parentPos = allAttributePositions.get(attr.id);
-                if (!parentPos) return null;
-                
-                return (
-                  <AttributeNode
-                    key={subAttr.id}
-                    attribute={subAttr}
-                    entityId={entity.id}
-                    entityX={parentPos.x - 70} // Offset from parent attribute position
-                    entityY={parentPos.y - 20}
-                    index={subIndex}
-                    total={attr.subAttributes?.length || 1}
-                    zoom={zoom}
-                    pan={pan}
-                    onMove={onAttributeMove}
-                    onSelect={() => onSelectElement({ type: 'attribute', id: subAttr.id })}
-                    isSelected={selectedElement?.type === 'attribute' && selectedElement.id === subAttr.id}
-                    allAttributePositions={allAttributePositions}
-                    entities={entities}
-                    relationships={relationships}
-                  />
-                );
-              })}
-            </React.Fragment>
+            <AttributeNode
+              key={attr.id}
+              attribute={attr}
+              entityId={entity.id}
+              entityX={entity.x}
+              entityY={entity.y}
+              index={index}
+              total={entity.attributes?.length || 1}
+              zoom={zoom}
+              pan={pan}
+              onMove={onAttributeMove}
+              onSelect={() => onSelectElement({ type: 'attribute', id: attr.id })}
+              isSelected={selectedElement?.type === 'attribute' && selectedElement.id === attr.id}
+            />
           ))}
         </React.Fragment>
       ))}
@@ -529,9 +430,6 @@ export function Canvas({
           pan={pan}
           onMove={(x, y) => onEntityMove(entity.id, x, y)}
           onSelect={() => onSelectElement({ type: 'entity', id: entity.id })}
-          entities={entities}
-          relationships={relationships}
-          attributePositions={allAttributePositions}
         />
       ))}
 
@@ -545,9 +443,6 @@ export function Canvas({
           pan={pan}
           onMove={(x, y) => onRelationshipMove(rel.id, x, y)}
           onSelect={() => onSelectElement({ type: 'relationship', id: rel.id })}
-          entities={entities}
-          relationships={relationships}
-          attributePositions={allAttributePositions}
         />
       ))}
     </div>
