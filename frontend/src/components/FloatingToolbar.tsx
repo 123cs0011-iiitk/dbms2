@@ -90,7 +90,7 @@ export function FloatingToolbar({
           </TooltipTrigger>
           <TooltipContent side="right" className="font-medium">
             <p style={{ fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif' }}>
-              {showAttributes ? 'Hide' : 'Show'} Attributes (Ovals)
+              {showAttributes ? 'Hide Attributes (Contracts Layout)' : 'Show Attributes (Expands Layout)'}
             </p>
           </TooltipContent>
         </Tooltip>

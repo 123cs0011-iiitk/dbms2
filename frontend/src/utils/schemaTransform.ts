@@ -115,6 +115,8 @@ export async function backendToFrontend(schemaData: BackendSchema): Promise<{
 
   // STEP 2: Create temporary entities for sequential layout
   const tempEntities: Entity[] = schemaData.tables.map((table, index) => {
+    const entityId = `entity-${Date.now()}-${index}`;
+    
     const attributes: Attribute[] = table.attributes.map((attrName, attrIndex) => {
       const columnData = table.columns.find(col => col.name === attrName);
       const dataType = columnData?.type || 'TEXT';
@@ -127,11 +129,14 @@ export async function backendToFrontend(schemaData: BackendSchema): Promise<{
         isForeignKey: false,
         isNullable: !attrName.toLowerCase().includes('name') && !attrName.toLowerCase().endsWith('_id'),
         isUnique: attrName.toLowerCase().includes('email'),
+        x: 0, // Will be calculated after entity positioning
+        y: 0, // Will be calculated after entity positioning
+        entityId: entityId,
       };
     });
 
     return {
-      id: `entity-${Date.now()}-${index}`,
+      id: entityId,
       name: table.name,
       x: 0, // Will be set by force-directed algorithm
       y: 0, // Will be set by force-directed algorithm

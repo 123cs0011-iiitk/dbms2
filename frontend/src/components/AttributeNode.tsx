@@ -6,71 +6,47 @@ import { formatDisplayName } from '../utils/formatUtils';
 type AttributeNodeProps = {
   attribute: Attribute;
   entityId: string;
-  entityX: number;
-  entityY: number;
   index: number;
-  total: number;
   zoom: number;
   pan: { x: number; y: number };
   onMove?: (attributeId: string, x: number, y: number) => void;
   onSelect?: () => void;
   isSelected?: boolean;
+  onAnimationComplete?: () => void;
 };
 
 export function AttributeNode({
   attribute,
-  entityX,
-  entityY,
   index,
-  total,
   zoom,
   pan,
   onMove,
   onSelect,
-  isSelected = false
+  isSelected = false,
+  onAnimationComplete
 }: AttributeNodeProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [customPosition, setCustomPosition] = useState<{ x: number; y: number } | null>(null);
   const nodeRef = useRef<HTMLDivElement>(null);
   
+  // Track if we've already called the animation complete callback
+  const hasCalledCallback = useRef(false);
+  
   const scale = zoom / 100;
   
-  // Simple positioning algorithm - returns world coordinates
-  const getAttributePosition = () => {
-    // Use custom position if available (from drag operations)
-    if (customPosition) {
-      return customPosition;
-    }
-    
-    // Use saved custom position from attribute data
-    if (attribute.customX !== undefined && attribute.customY !== undefined) {
-      return { x: attribute.customX, y: attribute.customY };
-    }
-    
-    // Use improved circular position that matches Canvas.tsx logic
-    const baseRadius = 200 + total * 12; // Adjusted for properly proportioned nodes
-    const radius = Math.min(Math.max(baseRadius, 160), 320); // Adjusted for properly proportioned nodes
-    
-    let angle;
-    if (total === 1) {
-      angle = Math.PI / 2; // Below entity
-    } else if (total === 2) {
-      angle = index === 0 ? Math.PI / 3 : (2 * Math.PI) / 3; // 60 and 120 degrees
-    } else {
-      // Distribute more evenly around the entity
-      angle = (index * (360 / total)) * (Math.PI / 180);
-    }
-    
-    // Ensure attributes are positioned relative to their parent entity only
-    // Adjust for top-left transform origin (subtract half width/height for centering)
-    const x = entityX + 90 + Math.cos(angle) * radius - 70; // -70 = half of 140px width
-    const y = entityY + 35 + Math.sin(angle) * radius - 18; // -18 = half of 36px height
-    
-    return { x, y };
-  };
+  // Use stored position from attribute with fallback to prevent rendering issues
+  let x = attribute.customX ?? attribute.x;
+  let y = attribute.customY ?? attribute.y;
   
-  const position = getAttributePosition();
+  // Fallback: If position is invalid, use a safe default
+  if (x === undefined || y === undefined || isNaN(x) || isNaN(y)) {
+    console.warn(`AttributeNode: Invalid position for "${attribute.name}", using fallback`);
+    x = 0; // Will be positioned by layout system
+    y = 0;
+  }
+  
+  const position = customPosition || { x, y };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -117,6 +93,37 @@ export function AttributeNode({
     }
   };
 
+  // Calculate animation delay using GLOBAL index across all attributes
+  const animationDelay = index * 0.1;
+  const animationDuration = 0.3; // Duration of the spring animation in seconds
+  
+  // Log when this attribute node starts animating
+  console.log(`🎭 AttributeNode "${attribute.name}" (GLOBAL index ${index}) starting animation with ${animationDelay.toFixed(1)}s delay`);
+  
+  // Call the animation complete callback after the animation finishes
+  // Use a timer instead of relying on Framer Motion's onAnimationComplete
+  // because it fires multiple times due to the infinite floating animation
+  useEffect(() => {
+    if (!hasCalledCallback.current && onAnimationComplete) {
+      const totalDelay = (animationDelay + animationDuration) * 1000; // Convert to milliseconds
+      
+      console.log(`⏰ AttributeNode "${attribute.name}" (index ${index}) scheduling timer for ${totalDelay}ms`);
+      
+      const timer = setTimeout(() => {
+        if (!hasCalledCallback.current) {
+          console.log(`  ✅ AttributeNode "${attribute.name}" animation COMPLETE (timer-based)`);
+          hasCalledCallback.current = true;
+          onAnimationComplete();
+        }
+      }, totalDelay);
+      
+      return () => {
+        console.log(`🗑️ Cleaning up timer for "${attribute.name}"`);
+        clearTimeout(timer);
+      };
+    }
+  }, [attribute.name, animationDelay, animationDuration, index]); // Removed onAnimationComplete to prevent useEffect re-triggering
+
   return (
     <motion.div
       ref={nodeRef}
@@ -136,7 +143,7 @@ export function AttributeNode({
       }}
       whileHover={{ scale: scale * 1.05 }}
       transition={{
-        delay: index * 0.1,
+        delay: animationDelay,
         type: 'spring',
         stiffness: 300,
         damping: 25,
