@@ -428,6 +428,7 @@ export function Canvas({
   return (
     <div
       ref={canvasRef}
+      data-canvas
       className={`flex-1 relative overflow-hidden ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
