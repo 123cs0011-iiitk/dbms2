@@ -1,6 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Canvas } from './components/Canvas';
-import { TableCanvas } from './components/TableCanvas';
+import ReactFlow, {
+  addEdge,
+  applyNodeChanges,
+  applyEdgeChanges,
+  MiniMap,
+  Controls,
+  Background,
+  Node,
+  Connection,
+  NodeChange,
+  EdgeChange,
+} from 'reactflow';
+import 'reactflow/dist/style.css';
+import TableNode from './components/TableNode';
 import { Toolbar } from './components/Toolbar';
 import { FloatingToolbar } from './components/FloatingToolbar';
 import { RightSidebar } from './components/RightSidebar';
@@ -248,71 +261,300 @@ export default function App() {
     }
   }, [tableNodes.length, viewMode, calculateAndSetZoom]);
 
-  // Handle view mode changes and data conversion
-  useEffect(() => {
-    if (viewMode === 'table' && entities.length > 0) {
-      // Convert entities to tables when switching to table mode
-      const { nodes, edges } = entitiesToTables(entities, relationships);
-      setTableNodes(nodes);
-      setTableEdges(edges);
-    } else if (viewMode === 'er-diagram' && tableNodes.length > 0) {
-      // Convert tables to entities when switching to ER diagram mode
-      const { entities: convertedEntities, relationships: convertedRelationships } = 
-        tablesToEntities(tableNodes, tableEdges);
-      setEntities(convertedEntities);
-      setRelationships(convertedRelationships);
-      
-      // Trigger auto-layout immediately after state update
-      setTimeout(() => {
-        if (convertedEntities.length > 0) {
-          // Calculate viewport center
-          const viewportCenter = {
-            x: window.innerWidth / 2,
-            y: window.innerHeight / 2
-          };
-          const centerX = viewportCenter.x;
-          const centerY = viewportCenter.y;
-          
-          // Position entities in circular layout
-          let radius;
-          if (convertedEntities.length === 1) {
-            radius = 0;
-          } else if (convertedEntities.length === 2) {
-            radius = 200;
-          } else if (convertedEntities.length <= 4) {
-            radius = 300;
-          } else if (convertedEntities.length <= 8) {
-            radius = 350;
-          } else {
-            radius = 400;
-          }
-          
-          const layoutEntities = convertedEntities.map((entity, index) => {
-            let x, y;
-            if (convertedEntities.length === 1) {
-              x = centerX;
-              y = centerY;
-            } else if (convertedEntities.length === 2) {
-              x = centerX + (index === 0 ? -radius : radius);
-              y = centerY;
-            } else {
-              const angle = (index * (360 / convertedEntities.length)) * (Math.PI / 180);
-              x = centerX + Math.cos(angle) * radius;
-              y = centerY + Math.sin(angle) * radius;
-            }
-            return { ...entity, x, y };
-          });
-          
-          setEntities(layoutEntities);
-        }
-      }, 50);
-    }
-  }, [viewMode]);
-
   const handleViewModeChange = (mode: ViewMode) => {
+    const prevMode = viewMode;
+    
+    // Only convert if mode actually changes
+    if (mode !== prevMode) {
+      if (mode === 'table' && entities.length > 0) {
+        // Convert entities to tables when switching to table mode
+        const { nodes, edges } = entitiesToTables(entities, relationships);
+        setTableNodes(nodes);
+        setTableEdges(edges);
+      } else if (mode === 'er-diagram' && tableNodes.length > 0) {
+        // Convert tables to entities when switching to ER diagram mode
+        const { entities: convertedEntities, relationships: convertedRelationships } = 
+          tablesToEntities(tableNodes, tableEdges);
+        setEntities(convertedEntities);
+        setRelationships(convertedRelationships);
+        
+        // Trigger auto-layout using the same algorithm as Auto Layout button
+        setTimeout(() => {
+          if (convertedEntities.length > 0) {
+            const viewportCenter = getViewportCenter();
+            
+            // Calculate optimal positions using sequential layout - no overlaps
+            const newPositions = calculateTreeLayout(convertedEntities, convertedRelationships, viewportCenter);
+            
+            // Update entity positions
+            const layoutEntities = convertedEntities.map(entity => {
+              const newPos = newPositions.get(entity.id);
+              if (newPos) {
+                return { ...entity, x: newPos.x, y: newPos.y };
+              }
+              return entity;
+            });
+            
+            setEntities(layoutEntities);
+            
+            // Recalculate relationship positions at midpoints
+            const updatedRelationships = convertedRelationships.map(rel => {
+              const fromEntity = layoutEntities.find(e => e.id === rel.fromEntityId);
+              const toEntity = layoutEntities.find(e => e.id === rel.toEntityId);
+              
+              if (fromEntity && toEntity) {
+                return {
+                  ...rel,
+                  x: (fromEntity.x + toEntity.x) / 2,
+                  y: (fromEntity.y + toEntity.y) / 2
+                };
+              }
+              return rel;
+            });
+            
+            setRelationships(updatedRelationships);
+          }
+        }, 50);
+      }
+    }
+    
     setViewMode(mode);
     setHasUnsavedChanges(true);
   };
+
+  // Table mode handlers
+  const handleAddColumn = useCallback(
+    (nodeId: string, colName: string, colType: string = 'TEXT') => {
+      setTableNodes((currentNodes) =>
+        currentNodes.map((n) =>
+          n.id === nodeId
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  columns: [...n.data.columns, { name: colName, type: colType }],
+                  values: [...n.data.values, []],
+                },
+              }
+            : n
+        )
+      );
+    },
+    []
+  );
+
+  const handleRenameTable = useCallback(
+    (nodeId: string, name: string) => {
+      setTableNodes((currentNodes) =>
+        currentNodes.map((n) =>
+          n.id === nodeId ? { ...n, data: { ...n.data, tableName: name } } : n
+        )
+      );
+    },
+    []
+  );
+
+  const handleRenameColumn = useCallback(
+    (nodeId: string, idx: number, newName: string) => {
+      setTableNodes((currentNodes) =>
+        currentNodes.map((n) =>
+          n.id === nodeId
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  columns: n.data.columns.map((c, i) =>
+                    i === idx ? { ...c, name: newName } : c
+                  ),
+                },
+              }
+            : n
+        )
+      );
+    },
+    []
+  );
+
+  const handleChangeColumnType = useCallback(
+    (nodeId: string, idx: number, newType: string) => {
+      setTableNodes((currentNodes) =>
+        currentNodes.map((n) =>
+          n.id === nodeId
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  columns: n.data.columns.map((c, i) =>
+                    i === idx ? { ...c, type: newType } : c
+                  ),
+                },
+              }
+            : n
+        )
+      );
+    },
+    []
+  );
+
+  const handleRemoveColumn = useCallback(
+    (nodeId: string, idx: number) => {
+      setTableNodes((currentNodes) =>
+        currentNodes.map((n) => {
+          if (n.id !== nodeId) return n;
+          const colName = n.data.columns[idx]?.name;
+          const nextCols = n.data.columns.filter((_, i) => i !== idx);
+          const nextVals = n.data.values.filter((_, i) => i !== idx);
+          const nextPK = n.data.primaryKeys?.includes(colName) ? [] : n.data.primaryKeys;
+          return {
+            ...n,
+            data: { ...n.data, columns: nextCols, values: nextVals, primaryKeys: nextPK },
+          };
+        })
+      );
+    },
+    []
+  );
+
+  const handleAddRow = useCallback(
+    (nodeId: string, rowValues: string[]) => {
+      setTableNodes((currentNodes) =>
+        currentNodes.map((n) => {
+          if (n.id !== nodeId) return n;
+
+          // Ensure values structure matches columns
+          let values = n.data.values || [];
+          const columns = n.data.columns.map((c) => c.name);
+          if (values.length !== columns.length) {
+            values = columns.map((_, idx) => (values[idx] ? values[idx] : []));
+          }
+          const primaryKeys = n.data.primaryKeys || [];
+
+          // Normalize row values length to number of columns
+          const normalizedRow = columns.map((_, idx) => {
+            const v = rowValues[idx];
+            return v === undefined || v === null ? '' : String(v);
+          });
+
+          // If all values are empty and no PK set, ignore
+          const allEmpty = normalizedRow.every((v) => v.trim() === '');
+          if (primaryKeys.length === 0 && allEmpty) {
+            return n;
+          }
+
+          // PK validation: non-null and unique
+          if (primaryKeys.length > 0) {
+            for (const pkCol of primaryKeys) {
+              const pkIndex = columns.indexOf(pkCol);
+              if (pkIndex >= 0) {
+                const pkValue = normalizedRow[pkIndex];
+                if (pkValue === undefined || pkValue === null || String(pkValue).trim() === '') {
+                  alert(`Primary key '${pkCol}' cannot be empty.`);
+                  return n;
+                }
+                const existing = n.data.values[pkIndex] || [];
+                if (existing.some((v) => String(v).trim() === String(pkValue).trim())) {
+                  alert(`Duplicate primary key value '${pkValue}' in column '${pkCol}'.`);
+                  return n;
+                }
+              }
+            }
+          }
+
+          const nextValues = values.map((colValues, idx) => {
+            const incoming = normalizedRow[idx];
+            return [...colValues, incoming];
+          });
+
+          return { ...n, data: { ...n.data, values: nextValues } };
+        })
+      );
+    },
+    []
+  );
+
+  const handleUpdateCell = useCallback(
+    (nodeId: string, rowIdx: number, colIdx: number, value: string) => {
+      setTableNodes((currentNodes) =>
+        currentNodes.map((n) => {
+          if (n.id !== nodeId) return n;
+          const col = n.data.columns[colIdx];
+          const val = String(value ?? '');
+          // basic type checks; silently ignore invalid
+          const trimmed = val.trim();
+          if (trimmed !== '') {
+            if (col.type === 'INTEGER' && !/^\-?\d+$/.test(trimmed)) return n;
+            if (col.type === 'REAL' && isNaN(Number(trimmed))) return n;
+            if (col.type === 'BOOLEAN') {
+              const lower = trimmed.toLowerCase();
+              const ok = ['true', 'false', '1', '0', 'yes', 'no'].includes(lower);
+              if (!ok) return n;
+            }
+          }
+          const nextValues = n.data.values.map((colValues, idx) => {
+            if (idx !== colIdx) return colValues;
+            const copy = [...colValues];
+            copy[rowIdx] = val;
+            return copy;
+          });
+          return { ...n, data: { ...n.data, values: nextValues } };
+        })
+      );
+    },
+    []
+  );
+
+  const handleRemoveRow = useCallback(
+    (nodeId: string, rowIdx: number) => {
+      setTableNodes((currentNodes) =>
+        currentNodes.map((n) => {
+          if (n.id !== nodeId) return n;
+          const nextValues = n.data.values.map((colValues) => colValues.filter((_, i) => i !== rowIdx));
+          return { ...n, data: { ...n.data, values: nextValues } };
+        })
+      );
+    },
+    []
+  );
+
+  const handleSetPrimaryKey = useCallback(
+    (nodeId: string, colName: string) => {
+      setTableNodes((currentNodes) =>
+        currentNodes.map((n) => {
+          if (n.id !== nodeId) return n;
+
+          const currentPrimaryKeys = n.data.primaryKeys || [];
+          let newPrimaryKeys: string[];
+
+          if (currentPrimaryKeys.includes(colName)) {
+            // Remove from primary keys
+            newPrimaryKeys = currentPrimaryKeys.filter((pk) => pk !== colName);
+          } else {
+            // Add to primary keys
+            newPrimaryKeys = [...currentPrimaryKeys, colName];
+          }
+
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              primaryKeys: newPrimaryKeys,
+              // Keep backward compatibility with single primaryKey
+              primaryKey: newPrimaryKeys.length === 1 ? newPrimaryKeys[0] : '',
+            },
+          };
+        })
+      );
+    },
+    []
+  );
+
+  const handleDeleteTable = useCallback(
+    (nodeId: string) => {
+      setTableNodes((currentNodes) => currentNodes.filter((n) => n.id !== nodeId));
+      setTableEdges((currentEdges) => currentEdges.filter((e) => e.source !== nodeId && e.target !== nodeId));
+    },
+    []
+  );
 
   const addEntity = (name: string = 'Entity', attributes?: Attribute[], connectToEntityId?: string | null, relationshipName?: string, fromCardinality?: string, toCardinality?: string) => {
     const id = `entity-${Date.now()}`;
@@ -510,6 +752,61 @@ export default function App() {
     }
     setHasUnsavedChanges(true);
   };
+
+  // Table mode: React Flow node types and handlers
+  const tableNodeTypes = useMemo(() => ({
+    tableNode: (props: any) => (
+      <TableNode
+        {...props}
+        onAddColumn={handleAddColumn}
+        onRenameTable={handleRenameTable}
+        onRenameColumn={handleRenameColumn}
+        onChangeColumnType={handleChangeColumnType}
+        onRemoveColumn={handleRemoveColumn}
+        onAddRow={handleAddRow}
+        onSetPrimaryKey={handleSetPrimaryKey}
+        onUpdateCell={handleUpdateCell}
+        onRemoveRow={handleRemoveRow}
+        onDeleteTable={handleDeleteTable}
+      />
+    ),
+  }), [
+    handleAddColumn,
+    handleRenameTable,
+    handleRenameColumn,
+    handleChangeColumnType,
+    handleRemoveColumn,
+    handleAddRow,
+    handleSetPrimaryKey,
+    handleUpdateCell,
+    handleRemoveRow,
+    handleDeleteTable,
+  ]);
+
+  const onTableNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      const updatedNodes = applyNodeChanges(changes, tableNodes as Node[]);
+      setTableNodes(updatedNodes as TableNodeType[]);
+    },
+    [tableNodes]
+  );
+
+  const onTableEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      const updatedEdges = applyEdgeChanges(changes, tableEdges);
+      setTableEdges(updatedEdges);
+    },
+    [tableEdges]
+  );
+
+  const onTableConnect = useCallback(
+    (params: Connection) => {
+      const edge = { ...params, animated: true, type: 'smoothstep' };
+      const updatedEdges = addEdge(edge, tableEdges);
+      setTableEdges(updatedEdges);
+    },
+    [tableEdges]
+  );
 
   const generateSQL = useCallback(() => {
     let sql = '-- Generated SQL DDL\n\n';
@@ -784,13 +1081,21 @@ export default function App() {
           )}
           
           {viewMode === 'table' && (
-            <TableCanvas
-              nodes={tableNodes}
-              edges={tableEdges}
-              onNodesChange={setTableNodes}
-              onEdgesChange={setTableEdges}
-              zoom={zoom}
-            />
+            <div data-canvas className="flex-1 relative">
+              <ReactFlow
+                nodes={tableNodes as Node[]}
+                edges={tableEdges}
+                onNodesChange={onTableNodesChange}
+                onEdgesChange={onTableEdgesChange}
+                onConnect={onTableConnect}
+                nodeTypes={tableNodeTypes}
+                fitView
+              >
+                <MiniMap />
+                <Controls />
+                <Background />
+              </ReactFlow>
+            </div>
           )}
         </div>
 
