@@ -316,7 +316,7 @@ export function TableCanvas({
   );
 
   return (
-    <div className="flex-1 relative" style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top left' }}>
+    <div data-canvas className="flex-1 relative" style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top left' }}>
       <ReactFlow
         nodes={nodes as Node[]}
         edges={edges}

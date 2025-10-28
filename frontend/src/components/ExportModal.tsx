@@ -4,14 +4,17 @@ import { Button } from './ui/button';
 import { toast } from 'sonner';
 import type { Entity, Relationship } from '../App';
 
+type ViewMode = 'er-diagram' | 'table';
+
 type ExportModalProps = {
   entities: Entity[];
   relationships: Relationship[];
   sqlCode: string;
   onClose: () => void;
+  viewMode: ViewMode;
 };
 
-export function ExportModal({ entities, relationships, sqlCode, onClose }: ExportModalProps) {
+export function ExportModal({ entities, relationships, sqlCode, onClose, viewMode }: ExportModalProps) {
   const handleExportSQL = () => {
     const blob = new Blob([sqlCode || '-- No SQL generated yet'], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -55,7 +58,8 @@ export function ExportModal({ entities, relationships, sqlCode, onClose }: Expor
       });
       
       const link = document.createElement('a');
-      link.download = 'er-diagram.png';
+      const filename = viewMode === 'er-diagram' ? 'er-diagram.png' : 'table-view.png';
+      link.download = filename;
       link.href = dataUrl;
       link.click();
       

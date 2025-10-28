@@ -831,6 +831,7 @@ export default function App() {
             relationships={relationships}
             sqlCode={sqlCode}
             onClose={() => setShowExportModal(false)}
+            viewMode={viewMode}
           />
         )}
         
