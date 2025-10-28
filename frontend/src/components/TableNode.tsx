@@ -183,9 +183,9 @@ export function TableNode({
     <div
       style={{
         borderRadius: 16,
-        overflow: "hidden",
-        minWidth: Math.max(280, data.columns.length * 100),
-        maxWidth: 600,
+        overflow: "visible",
+        width: 'auto',
+        minWidth: Math.max(320, data.columns.length * 150),
         background: "#ffffff",
         fontFamily: "Helvetica Neue, Helvetica, Arial, sans-serif",
         boxShadow: `0 4px 6px -1px rgba(0,0,0,0.1), 0 10px 15px -3px ${colorScheme.shadow}, 0 0 0 1px ${colorScheme.border}`,
@@ -193,13 +193,28 @@ export function TableNode({
     >
       {/* Table Name Header - Prominent Gradient */}
       <div 
-        className="cursor-move flex items-center justify-between relative overflow-hidden"
+        className="cursor-move flex items-center relative overflow-hidden"
         style={{
           background: colorScheme.header,
           padding: "px-6 py-4",
           boxShadow: '0 4px 12px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1)',
         }}
       >
+        {/* Drag Handle - Left Side */}
+        <div 
+          className="flex items-center justify-center cursor-grab active:cursor-grabbing"
+          style={{
+            padding: "8px 12px",
+            fontSize: 18,
+            color: "rgba(255,255,255,0.7)",
+            userSelect: "none",
+          }}
+          title="Drag to move"
+        >
+          ⋮⋮
+        </div>
+        
+        {/* Table Name Input - Center */}
         <input
           value={data.tableName}
           onChange={(e) => onRenameTable && onRenameTable(id, e.target.value)}
@@ -213,6 +228,8 @@ export function TableNode({
             padding: "16px 24px",
           }}
         />
+        
+        {/* Delete Button - Right */}
         <button
           onClick={() => {
             if (window.confirm(`Are you sure you want to delete the table '${data.tableName}'?`)) {
@@ -299,7 +316,7 @@ export function TableNode({
         )}
 
         {/* Table Grid - Polished */}
-        <table className="w-full" style={{ borderCollapse: "separate", borderSpacing: 0, marginBottom: 12 }}>
+        <table className="w-full" style={{ borderCollapse: "separate", borderSpacing: 0, marginBottom: 12, tableLayout: 'auto', width: '100%' }}>
           <thead>
             <tr>
               {data.columns.map((col, idx) => (
@@ -310,11 +327,12 @@ export function TableNode({
                     padding: "12px 8px",
                     background: colorScheme.header,
                     color: "#fff",
-                    minWidth: "100px",
-                    maxWidth: "180px",
+                    minWidth: "140px",
+                    width: 'auto',
                     fontWeight: 600,
                     fontSize: 13,
                     textShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -331,6 +349,8 @@ export function TableNode({
                           padding: "4px 6px",
                           borderRadius: 4,
                           cursor: "text",
+                          overflow: "visible",
+                          whiteSpace: "nowrap",
                         }}
                         onFocus={(e) => {
                           e.target.style.background = "rgba(255,255,255,0.3)";
@@ -480,7 +500,6 @@ export function TableNode({
                         boxSizing: "border-box",
                         color: "#1f2937",
                       }}
-                      placeholder="#9ca3af"
                       onFocus={(e) => {
                         e.target.style.background = "#ffffff";
                         e.target.style.outline = `2px solid ${colorScheme.borderStrong}`;

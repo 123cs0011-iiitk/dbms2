@@ -40,11 +40,27 @@ export function detectAndResolveOverlaps(
   if (nodes.length === 0) return nodes;
 
   const resolvedNodes: TableNode[] = [];
-  const SPACING_INCREMENT = 600; // Horizontal spacing between tables
-  const VERTICAL_INCREMENT = 400; // Vertical spacing when moving to next row
+  const SPACING_INCREMENT = 700; // Horizontal spacing between tables (increased for larger tables)
+  const VERTICAL_INCREMENT = 500; // Vertical spacing when moving to next row (increased for larger tables)
+
+  // Helper function to calculate actual table dimensions based on content
+  const getTableSize = (node: TableNode) => {
+    const columns = node.data.columns.length;
+    const rows = node.data.values?.[0]?.length || 0;
+    // Calculate width: min 320px, plus 150px per column
+    const width = Math.max(320, columns * 150);
+    // Calculate height: header + primary key section + rows + buttons
+    const headerHeight = 70;
+    const pkSectionHeight = 50;
+    const rowHeight = 40;
+    const buttonsHeight = 50;
+    const height = headerHeight + pkSectionHeight + (rows + 1) * rowHeight + buttonsHeight;
+    return { width, height: Math.max(300, height) };
+  };
 
   for (let i = 0; i < nodes.length; i++) {
     const currentNode = nodes[i];
+    const currentSize = getTableSize(currentNode);
     let currentPos = { x: currentNode.position.x, y: currentNode.position.y };
     let attempts = 0;
     const maxAttempts = 100; // Prevent infinite loop
@@ -54,16 +70,17 @@ export function detectAndResolveOverlaps(
       let hasOverlap = false;
 
       for (const resolvedNode of resolvedNodes) {
+        const resolvedSize = getTableSize(resolvedNode);
         if (
           checkOverlap(
             currentPos.x,
             currentPos.y,
-            tableWidth,
-            tableHeight,
+            currentSize.width,
+            currentSize.height,
             resolvedNode.position.x,
             resolvedNode.position.y,
-            tableWidth,
-            tableHeight,
+            resolvedSize.width,
+            resolvedSize.height,
             minPadding
           )
         ) {

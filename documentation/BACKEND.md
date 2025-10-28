@@ -12,40 +12,44 @@ Python offers superior capabilities for AI/ML tasks: mature AI ecosystem, built-
 - **Intelligent SQL Generation**: Creates proper CREATE TABLE statements with relationships
 - **Real Database Operations**: Execute SQL, inspect tables, manage schemas
 - **Interactive API Documentation**: Auto-generated docs at `/docs` endpoint
-- **Multi-Provider AI Support**: Google Gemini, Perplexity API, or fallback parser
+- **AI Provider**: Google Gemini
 - **Schema Persistence**: Save and load complete database schemas
 - **Sample Data Support**: Handles INSERT statements for test data
 
 ## 🚀 Installation
 
 ### Prerequisites
+
 - Python 3.8 or higher
 - pip package manager
 
 ### Setup
 
 1. **Navigate to backend directory:**
+
    ```bash
    cd backend
    ```
 
 2. **Install dependencies:**
+
    ```bash
    pip install -r requirements.txt
    ```
 
 3. **Configure environment variables:**
-   
+
    Create a `.env` file in the project root (not in backend directory):
+
    ```env
    GEMINI_API_KEY=your_actual_api_key_here
-   PERPLEXITY_API_KEY=your_perplexity_api_key_here  # Optional
    DEFAULT_AI_PROVIDER=gemini
    DB_PATH=./backend/data/database.sqlite
    PORT=5000
    ```
 
 4. **Start the server:**
+
    ```bash
    python run.py
    ```
@@ -56,22 +60,22 @@ Python offers superior capabilities for AI/ML tasks: mature AI ecosystem, built-
 
 ### Complete Endpoint Reference
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/` | API information and version |
-| GET | `/api/health` | Health check with system status |
-| POST | `/api/generate-database` | Generate complete database from natural language |
-| POST | `/api/generate-sql` | Generate SQL from prompt (legacy) |
-| POST | `/api/execute-sql` | Execute SQL statements and return results |
-| GET | `/api/tables` | List all database tables |
-| GET | `/api/tables/{table_name}/structure` | Get table structure, columns, and foreign keys |
-| DELETE | `/api/tables/{table_name}` | Drop a specific table |
-| GET | `/api/generate-drop-sql` | Generate DROP statements for all tables |
-| GET | `/api/generate-drop-sql/{table_name}` | Generate DROP statement for specific table |
-| GET | `/api/saved-schemas` | Retrieve all saved schemas |
-| POST | `/api/save-schema` | Save schema with metadata |
-| DELETE | `/api/schemas/{schema_id}` | Delete a saved schema |
-| POST | `/api/reset-database` | Reset entire database (drop all tables) |
+| Method | Endpoint                              | Description                                      |
+| ------ | ------------------------------------- | ------------------------------------------------ |
+| GET    | `/`                                   | API information and version                      |
+| GET    | `/api/health`                         | Health check with system status                  |
+| POST   | `/api/generate-database`              | Generate complete database from natural language |
+| POST   | `/api/generate-sql`                   | Generate SQL from prompt (legacy)                |
+| POST   | `/api/execute-sql`                    | Execute SQL statements and return results        |
+| GET    | `/api/tables`                         | List all database tables                         |
+| GET    | `/api/tables/{table_name}/structure`  | Get table structure, columns, and foreign keys   |
+| DELETE | `/api/tables/{table_name}`            | Drop a specific table                            |
+| GET    | `/api/generate-drop-sql`              | Generate DROP statements for all tables          |
+| GET    | `/api/generate-drop-sql/{table_name}` | Generate DROP statement for specific table       |
+| GET    | `/api/saved-schemas`                  | Retrieve all saved schemas                       |
+| POST   | `/api/save-schema`                    | Save schema with metadata                        |
+| DELETE | `/api/schemas/{schema_id}`            | Delete a saved schema                            |
+| POST   | `/api/reset-database`                 | Reset entire database (drop all tables)          |
 
 ### Detailed Endpoint Documentation
 
@@ -80,14 +84,16 @@ Python offers superior capabilities for AI/ML tasks: mature AI ecosystem, built-
 Generate a complete database schema from natural language description.
 
 **Request:**
+
 ```json
 {
   "prompt": "Create a library system with books, members, and loans",
-  "aiProvider": "gemini"  // Optional: "gemini", "perplexity", or "fallback"
+  "aiProvider": "gemini" // Optional: "gemini", "perplexity", or "fallback"
 }
 ```
 
 **Response:**
+
 ```json
 {
   "sql": "CREATE TABLE Book (...); CREATE TABLE Member (...);",
@@ -114,6 +120,7 @@ Generate a complete database schema from natural language description.
 Execute SQL statements on the database.
 
 **Request:**
+
 ```json
 {
   "sql": "SELECT * FROM Book WHERE Genre = 'Fiction'"
@@ -121,6 +128,7 @@ Execute SQL statements on the database.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -137,6 +145,7 @@ Execute SQL statements on the database.
 Get detailed table structure including columns and foreign keys.
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -167,6 +176,7 @@ Get detailed table structure including columns and foreign keys.
 Retrieve all saved schemas with metadata.
 
 **Response:**
+
 ```json
 {
   "schemas": [
@@ -188,6 +198,7 @@ Retrieve all saved schemas with metadata.
 Save a schema to the database.
 
 **Request:**
+
 ```json
 {
   "prompt": "Library management system",
@@ -200,6 +211,7 @@ Save a schema to the database.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -213,6 +225,7 @@ Save a schema to the database.
 Reset the entire database by dropping all user tables.
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -274,6 +287,7 @@ Example Output:
 ### SQL Generation
 
 SQL is generated with proper constraints:
+
 - Primary keys with auto-increment
 - Foreign keys with proper references
 - NOT NULL constraints where appropriate
@@ -305,6 +319,7 @@ curl http://localhost:5000/api/tables
 ### Interactive API Documentation
 
 Once the server is running:
+
 - **Swagger UI**: http://localhost:5000/docs
 - **ReDoc**: http://localhost:5000/redoc
 
@@ -337,37 +352,41 @@ python-dotenv>=1.0.0         # Environment variables
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GEMINI_API_KEY` | Google Gemini API key | None (uses fallback) |
-| `PERPLEXITY_API_KEY` | Perplexity API key | None |
-| `DEFAULT_AI_PROVIDER` | AI provider to use | `fallback` |
-| `DB_PATH` | SQLite database path | `./data/database.sqlite` |
-| `PORT` | Server port | `5000` |
+| Variable              | Description           | Default                  |
+| --------------------- | --------------------- | ------------------------ |
+| `GEMINI_API_KEY`      | Google Gemini API key | None (uses fallback)     |
+| `PERPLEXITY_API_KEY`  | Perplexity API key    | None                     |
+| `DEFAULT_AI_PROVIDER` | AI provider to use    | `fallback`               |
+| `DB_PATH`             | SQLite database path  | `./data/database.sqlite` |
+| `PORT`                | Server port           | `5000`                   |
 
 ## 🛠️ Troubleshooting
 
 ### Common Issues
 
 **Python version too old**
+
 ```bash
 python --version  # Should be 3.8+
 # Install Python from python.org
 ```
 
 **Missing dependencies**
+
 ```bash
 cd backend
 pip install -r requirements.txt
 ```
 
 **API key not configured**
+
 ```bash
 # Check .env file exists in project root (not in backend)
 # Should contain: GEMINI_API_KEY=your_key_here
 ```
 
 **Port already in use**
+
 ```bash
 # Windows
 taskkill /F /PID (netstat -ano | findstr :5000)[-1].split()[-1]
@@ -377,12 +396,14 @@ lsof -ti:5000 | xargs kill -9
 ```
 
 **Database locked errors**
+
 ```bash
 # Close all connections and restart server
 # Or delete database.sqlite and restart
 ```
 
 **Import errors with google-generativeai**
+
 ```bash
 pip install --upgrade google-generativeai
 ```

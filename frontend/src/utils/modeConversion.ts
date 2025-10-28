@@ -20,6 +20,7 @@ export type TableNodeData = {
     refTableId?: string;
     refColumn?: string;
   }[];
+  color?: string;
 };
 
 export type TableNode = {
@@ -121,6 +122,7 @@ export function entitiesToTables(
         primaryKey,
         primaryKeys,
         foreignKeys,
+        color: entity.color,
       },
     };
   });
@@ -217,7 +219,7 @@ export function tablesToEntities(
       name: node.data.tableName,
       x,
       y,
-      color: '#7aa2f7',
+      color: node.data.color || '#7aa2f7',
       attributes,
       sampleData,
     };
