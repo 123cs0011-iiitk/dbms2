@@ -21,7 +21,7 @@ type TableCanvasProps = {
   edges: Edge[];
   onNodesChange: (nodes: TableNodeType[]) => void;
   onEdgesChange: (edges: Edge[]) => void;
-  zoom: number;
+  zoom?: number; // Optional - kept for API compatibility but not used
 };
 
 export function TableCanvas({
@@ -29,7 +29,6 @@ export function TableCanvas({
   edges,
   onNodesChange,
   onEdgesChange,
-  zoom,
 }: TableCanvasProps) {
   // Callbacks for TableNode actions
   const handleAddColumn = useCallback(
@@ -316,7 +315,7 @@ export function TableCanvas({
   );
 
   return (
-    <div data-canvas className="flex-1 relative" style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top left' }}>
+    <div data-canvas className="flex-1 relative">
       <ReactFlow
         nodes={nodes as Node[]}
         edges={edges}
