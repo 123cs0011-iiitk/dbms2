@@ -109,7 +109,9 @@ function findNonOverlappingPosition(
 
 /**
  * Layout sub-attributes around their parent composite attribute
+ * NOTE: Currently disabled - subAttributes feature not yet implemented
  */
+/*
 function layoutSubAttributes(
   parentAttribute: Attribute,
   parentX: number,
@@ -126,10 +128,15 @@ function layoutSubAttributes(
   const subAttrs = parentAttribute.subAttributes;
   const radius = config.subAttributeRadius;
 
-  subAttrs.forEach((subAttr, index) => {
+  subAttrs.forEach((subAttr: any, index: number) => {
     const angle = calculateAngle(index, subAttrs.length);
-    const desiredX = parentX + Math.cos(angle) * radius;
-    const desiredY = parentY + Math.sin(angle) * radius;
+    // Calculate center position
+    const centerX = parentX + Math.cos(angle) * radius;
+    const centerY = parentY + Math.sin(angle) * radius;
+    
+    // Convert to top-left coordinates (attribute is 140x36)
+    const desiredX = centerX - 70; // Subtract half width
+    const desiredY = centerY - 18; // Subtract half height
 
     const position = findNonOverlappingPosition(
       { x: desiredX, y: desiredY },
@@ -143,6 +150,7 @@ function layoutSubAttributes(
 
   return positions;
 }
+*/
 
 /**
  * Layout all attributes for a single entity
@@ -150,7 +158,8 @@ function layoutSubAttributes(
 export function layoutEntityAttributes(
   entity: Entity,
   config: AttributeLayoutConfig = DEFAULT_CONFIG,
-  existingPositions: AttributePosition[] = []
+  existingPositions: AttributePosition[] = [],
+  expansionFactor: number = 1.0
 ): Map<string, AttributePosition> {
   const positions = new Map<string, AttributePosition>();
   
@@ -162,21 +171,21 @@ export function layoutEntityAttributes(
   const entityCenterY = entity.y + 35; // Entity center Y (half of 70px height)
   
   const attributes = entity.attributes;
-  const radius = calculateRadius(attributes.length, config);
+  const baseRadius = calculateRadius(attributes.length, config);
+  const radius = baseRadius * expansionFactor; // Scale radius by expansion factor
 
   // Layout main attributes around entity
   attributes.forEach((attr, index) => {
-    // Skip if attribute already has custom position
-    if (attr.customX !== undefined && attr.customY !== undefined) {
-      const customPos = { x: attr.customX, y: attr.customY };
-      positions.set(attr.id, customPos);
-      existingPositions.push(customPos);
-      return;
-    }
-
+    // Always recalculate positions based on current entity location
+    // (Don't skip based on customX/customY - those should be updated)
     const angle = calculateAngle(index, attributes.length);
-    const desiredX = entityCenterX + Math.cos(angle) * radius;
-    const desiredY = entityCenterY + Math.sin(angle) * radius;
+    // Calculate center position first
+    const centerX = entityCenterX + Math.cos(angle) * radius;
+    const centerY = entityCenterY + Math.sin(angle) * radius;
+    
+    // Convert to top-left coordinates (attribute is 140x36)
+    const desiredX = centerX - 70; // Subtract half width
+    const desiredY = centerY - 18; // Subtract half height
 
     const position = findNonOverlappingPosition(
       { x: desiredX, y: desiredY },
@@ -186,24 +195,31 @@ export function layoutEntityAttributes(
     positions.set(attr.id, position);
     existingPositions.push(position);
 
+    // NOTE: Sub-attributes feature currently disabled
     // If this is a composite attribute, layout its sub-attributes
-    if (attr.isComposite && attr.subAttributes && attr.subAttributes.length > 0) {
-      const subPositions = layoutSubAttributes(
-        attr,
-        position.x,
-        position.y,
-        config,
-        existingPositions
-      );
-      
-      // Merge sub-attribute positions into main positions map
-      subPositions.forEach((pos, id) => {
-        positions.set(id, pos);
-      });
-    }
+    // if (attr.isComposite && attr.subAttributes && attr.subAttributes.length > 0) {
+    //   const parentCenterX = position.x + 70;
+    //   const parentCenterY = position.y + 18;
+    //   const subPositions = layoutSubAttributes(attr, parentCenterX, parentCenterY, config, existingPositions);
+    //   subPositions.forEach((pos, id) => {
+    //     positions.set(id, pos);
+    //   });
+    // }
   });
 
   return positions;
+}
+
+/**
+ * Recalculate attributes for a single entity (used when entity is dragged)
+ */
+export function recalculateAttributesForEntity(
+  entity: Entity,
+  config: AttributeLayoutConfig = DEFAULT_CONFIG,
+  expansionFactor: number = 1.0
+): Map<string, AttributePosition> {
+  // Use empty existingPositions since we're only recalculating for this entity
+  return layoutEntityAttributes(entity, config, [], expansionFactor);
 }
 
 /**
@@ -211,10 +227,13 @@ export function layoutEntityAttributes(
  */
 export function layoutAllAttributes(
   entities: Entity[],
-  config: AttributeLayoutConfig = DEFAULT_CONFIG
+  config: AttributeLayoutConfig = DEFAULT_CONFIG,
+  expansionFactor: number = 1.0
 ): Map<string, AttributePosition> {
   const allPositions = new Map<string, AttributePosition>();
   const existingPositions: AttributePosition[] = [];
+
+  console.log(`🎯 layoutAllAttributes: Processing ${entities.length} entities with expansion factor ${expansionFactor.toFixed(2)}`);
 
   // First pass: collect all entity positions to avoid
   entities.forEach((entity) => {
@@ -225,15 +244,23 @@ export function layoutAllAttributes(
   });
 
   // Second pass: layout attributes for each entity
-  entities.forEach((entity) => {
-    const entityAttrPositions = layoutEntityAttributes(entity, config, existingPositions);
+  entities.forEach((entity, entityIndex) => {
+    const attrCount = entity.attributes?.length || 0;
+    console.log(`  Entity ${entityIndex + 1} "${entity.name}": ${attrCount} attributes`);
+    
+    const entityAttrPositions = layoutEntityAttributes(entity, config, existingPositions, expansionFactor);
     
     // Merge into global positions map
     entityAttrPositions.forEach((pos, id) => {
       allPositions.set(id, pos);
+      const attr = entity.attributes?.find(a => a.id === id);
+      if (attr) {
+        console.log(`    ✓ ${attr.name}: (${Math.round(pos.x)}, ${Math.round(pos.y)})`);
+      }
     });
   });
 
+  console.log(`✅ Total positioned: ${allPositions.size} attributes`);
   return allPositions;
 }
 
@@ -244,25 +271,43 @@ export function applyAttributePositions(
   entities: Entity[],
   positions: Map<string, AttributePosition>
 ): void {
+  console.log(`🔧 applyAttributePositions: Applying ${positions.size} positions to ${entities.length} entities`);
+  
+  let appliedCount = 0;
+  let missingCount = 0;
+  
   entities.forEach((entity) => {
     entity.attributes?.forEach((attr) => {
       const pos = positions.get(attr.id);
       if (pos) {
+        // Set both base position AND custom position
+        // This ensures fallback works correctly
+        attr.x = pos.x;
+        attr.y = pos.y;
         attr.customX = pos.x;
         attr.customY = pos.y;
+        appliedCount++;
+      } else {
+        console.warn(`  ⚠️ No position found for attribute "${attr.name}" (id: ${attr.id})`);
+        missingCount++;
       }
 
+      // NOTE: Sub-attributes feature currently disabled
       // Apply positions to sub-attributes
-      if (attr.isComposite && attr.subAttributes) {
-        attr.subAttributes.forEach((subAttr) => {
-          const subPos = positions.get(subAttr.id);
-          if (subPos) {
-            subAttr.customX = subPos.x;
-            subAttr.customY = subPos.y;
-          }
-        });
-      }
+      // if (attr.isComposite && attr.subAttributes) {
+      //   attr.subAttributes.forEach((subAttr: any) => {
+      //     const subPos = positions.get(subAttr.id);
+      //     if (subPos) {
+      //       subAttr.x = subPos.x;
+      //       subAttr.y = subPos.y;
+      //       subAttr.customX = subPos.x;
+      //       subAttr.customY = subPos.y;
+      //     }
+      //   });
+      // }
     });
   });
+  
+  console.log(`✅ Applied ${appliedCount} positions, ${missingCount} missing`);
 }
 

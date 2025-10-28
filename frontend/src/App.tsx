@@ -20,6 +20,15 @@ import { calculateTreeLayout } from './utils/treeLayout';
 import { toast } from 'sonner';
 import { entitiesToTables, tablesToEntities, TableNode as TableNodeType } from './utils/modeConversion';
 import { Edge } from 'reactflow';
+import { 
+  calculateExpansionFactor, 
+  expandLayout, 
+  storeOriginalPositions, 
+  restoreOriginalPositions,
+  clearAttributeCustomPositions,
+  type PositionStore
+} from './utils/layoutExpansion';
+import { layoutAllAttributes, applyAttributePositions } from './utils/attributeLayout';
 
 export type Entity = {
   id: string;
@@ -45,6 +54,9 @@ export type Attribute = {
   isForeignKey?: boolean;
   isNullable?: boolean;
   isUnique?: boolean;
+  x: number;
+  y: number;
+  entityId: string;
   customX?: number;
   customY?: number;
 };
@@ -87,6 +99,7 @@ export default function App() {
   const [zoom, setZoom] = useState(100);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [currentPrompt, setCurrentPrompt] = useState('');
+  const [originalPositions, setOriginalPositions] = useState<PositionStore | null>(null);
 
   // Apply dark mode class to document root for portal-rendered components
   useEffect(() => {
@@ -143,6 +156,76 @@ export default function App() {
   const toggleSqlSeparators = useCallback(() => {
     setShowSqlSeparators(prev => !prev);
   }, []);
+
+  // Handle attribute visibility toggle with layout expansion/contraction
+  const handleToggleAttributes = useCallback(() => {
+    setShowAttributes(prev => {
+      const newValue = !prev;
+      
+      if (newValue) {
+        // SHOWING ATTRIBUTES - Expand layout
+        console.log('🔄 Showing attributes - expanding layout...');
+        console.log(`📊 Current entities: ${entities.length}`);
+        
+        // 1. Store original positions
+        const stored = storeOriginalPositions(entities, relationships);
+        setOriginalPositions(stored);
+        
+        // 2. Calculate expansion factor based on attribute count
+        const factor = calculateExpansionFactor(entities);
+        console.log(`📏 Expansion factor: ${factor.toFixed(2)}x`);
+        
+        // 3. Expand entities and relationships
+        const { entities: expandedEntities, relationships: expandedRelationships } = 
+          expandLayout(entities, relationships, factor);
+        
+        // 4. Layout attributes around expanded entities
+        const attributePositions = layoutAllAttributes(expandedEntities);
+        applyAttributePositions(expandedEntities, attributePositions);
+        
+        console.log(`✅ Positioned ${attributePositions.size} attributes`);
+        
+        // 5. Deep clone entities to ensure React detects all changes (including nested attributes)
+        const deepClonedEntities = expandedEntities.map(entity => ({
+          ...entity,
+          attributes: entity.attributes ? entity.attributes.map(attr => ({ ...attr })) : []
+        }));
+        
+        // 6. Update state
+        setEntities(deepClonedEntities);
+        setRelationships([...expandedRelationships]);
+        
+        console.log('✅ Layout expanded and attributes positioned');
+      } else {
+        // HIDING ATTRIBUTES - Contract layout
+        console.log('🔄 Hiding attributes - contracting layout...');
+        
+        if (originalPositions) {
+          // 1. Restore original positions
+          const { entities: restoredEntities, relationships: restoredRelationships } = 
+            restoreOriginalPositions(entities, relationships, originalPositions);
+          
+          // 2. Clear custom attribute positions
+          const clearedEntities = clearAttributeCustomPositions(restoredEntities);
+          
+          // 3. Deep clone to ensure React detects changes
+          const deepClonedEntities = clearedEntities.map(entity => ({
+            ...entity,
+            attributes: entity.attributes ? entity.attributes.map(attr => ({ ...attr })) : []
+          }));
+          
+          // 4. Update state
+          setEntities(deepClonedEntities);
+          setRelationships([...restoredRelationships]);
+          setOriginalPositions(null);
+          
+          console.log('✅ Layout contracted to original positions');
+        }
+      }
+      
+      return newValue;
+    });
+  }, [entities, relationships, originalPositions]);
 
   // Auto-zoom for ER diagram mode
   useEffect(() => {
@@ -232,11 +315,15 @@ export default function App() {
   };
 
   const addEntity = (name: string = 'Entity', attributes?: Attribute[], connectToEntityId?: string | null, relationshipName?: string, fromCardinality?: string, toCardinality?: string) => {
+    const id = `entity-${Date.now()}`;
+    const x = 300 + Math.random() * 200;
+    const y = 200 + Math.random() * 200;
+    
     const newEntity: Entity = {
-      id: `entity-${Date.now()}`,
+      id,
       name,
-      x: 300 + Math.random() * 200,
-      y: 200 + Math.random() * 200,
+      x,
+      y,
       color: '#7aa2f7',
       attributes: attributes || [
         {
@@ -245,12 +332,18 @@ export default function App() {
           type: 'INTEGER',
           isPrimaryKey: true,
           isNullable: false,
+          x: x + 90 - 70,
+          y: y + 35 + 200 - 18,
+          entityId: id,
         },
         {
           id: `attr-${Date.now()}-1`,
           name: 'name',
           type: 'VARCHAR(100)',
           isNullable: false,
+          x: x + 90 - 70,
+          y: y + 35 + 200 - 18,
+          entityId: id,
         },
       ],
     };
@@ -308,7 +401,57 @@ export default function App() {
   };
 
   const updateEntity = (id: string, updates: Partial<Entity>) => {
-    const updatedEntities = entities.map(e => e.id === id ? { ...e, ...updates } : e);
+    const updatedEntities = entities.map(e => {
+      if (e.id === id) {
+        const updated = { ...e, ...updates };
+        
+        // If position changed and attributes are visible, recalculate attribute positions
+        if ((updates.x !== undefined || updates.y !== undefined) && updated.attributes && showAttributes) {
+          updated.attributes = updated.attributes.map((attr, index) => {
+            // If user has manually positioned this attribute, preserve the offset
+            if (attr.customX !== undefined && attr.customY !== undefined) {
+              // Calculate the offset from the old entity position
+              const offsetX = attr.customX - e.x;
+              const offsetY = attr.customY - e.y;
+              
+              // Apply the same offset to the new entity position
+              return {
+                ...attr,
+                x: updated.x + offsetX,
+                y: updated.y + offsetY,
+                customX: updated.x + offsetX,
+                customY: updated.y + offsetY,
+                entityId: updated.id
+              };
+            }
+            
+            // Otherwise, recalculate position based on angle
+            const total = updated.attributes?.length || 1;
+            const baseRadius = 200 + total * 12;
+            const radius = Math.min(Math.max(baseRadius, 160), 320);
+            
+            let angle;
+            if (total === 1) {
+              angle = Math.PI / 2;
+            } else if (total === 2) {
+              angle = index === 0 ? Math.PI / 3 : (2 * Math.PI) / 3;
+            } else {
+              angle = (index * (360 / total)) * (Math.PI / 180);
+            }
+            
+            return {
+              ...attr,
+              x: updated.x + 90 + Math.cos(angle) * radius - 70,
+              y: updated.y + 35 + Math.sin(angle) * radius - 18,
+              entityId: updated.id
+            };
+          });
+        }
+        
+        return updated;
+      }
+      return e;
+    });
     setEntities(updatedEntities);
     
     // Auto-reposition relationships connected to this entity
@@ -610,7 +753,7 @@ export default function App() {
                 }}
                 hasSelection={!!selectedElement}
                 showAttributes={showAttributes}
-                onToggleAttributes={() => setShowAttributes(!showAttributes)}
+                onToggleAttributes={handleToggleAttributes}
                 zoom={zoom}
                 onZoomIn={handleZoomIn}
                 onZoomOut={handleZoomOut}
