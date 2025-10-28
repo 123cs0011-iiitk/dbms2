@@ -1,5 +1,6 @@
 import React from 'react';
 import { Entity, Relationship } from '../App';
+import { detectAndResolveOverlaps } from './tableLayoutUtils';
 
 export type TableColumn = {
   name: string;
@@ -152,7 +153,10 @@ export function entitiesToTables(
     };
   });
 
-  return { nodes, edges };
+  // Resolve overlaps by repositioning nodes that overlap with each other
+  const resolvedNodes = detectAndResolveOverlaps(nodes, 500, 300, 50);
+
+  return { nodes: resolvedNodes, edges };
 }
 
 /**
