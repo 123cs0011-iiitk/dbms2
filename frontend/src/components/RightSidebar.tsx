@@ -46,6 +46,9 @@ export function RightSidebar({
         name: 'new_column',
         type: 'VARCHAR(255)',
         isNullable: true,
+        x: 0,
+        y: 0,
+        entityId: entity.id,
       };
       onUpdateEntity(entity.id, {
         attributes: [...entity.attributes, newAttr],
@@ -118,8 +121,8 @@ export function RightSidebar({
     };
 
     return (
-      <div className="w-96 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-[#16161e] flex flex-col">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="w-96 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-[#16161e] flex flex-col h-full overflow-hidden">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded flex items-center justify-center" style={{ backgroundColor: entity.color + '30' }}>
@@ -138,51 +141,53 @@ export function RightSidebar({
           </div>
         </div>
 
-        <Tabs defaultValue="general" className="flex-1 flex flex-col">
-          <TabsList className="w-full rounded-none border-b border-gray-200 dark:border-gray-700 justify-start px-4">
-            <TabsTrigger value="general" className="gap-2">
-              <Settings className="w-4 h-4" />
-              General
-            </TabsTrigger>
-            <TabsTrigger value="fields" className="gap-2">
-              <Database className="w-4 h-4" />
-              Fields
-            </TabsTrigger>
-            <TabsTrigger value="data" className="gap-2">
-              <Table className="w-4 h-4" />
-              Sample Data
-            </TabsTrigger>
-            <TabsTrigger value="style" className="gap-2">
-              <Palette className="w-4 h-4" />
-              Style
-            </TabsTrigger>
-          </TabsList>
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <Tabs defaultValue="general" className="flex-1 flex flex-col min-h-0" style={{ display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+            <TabsList className="w-full rounded-none border-b border-gray-200 dark:border-gray-700 justify-start px-4 flex-shrink-0">
+              <TabsTrigger value="general" className="gap-2">
+                <Settings className="w-4 h-4" />
+                General
+              </TabsTrigger>
+              <TabsTrigger value="fields" className="gap-2">
+                <Database className="w-4 h-4" />
+                Fields
+              </TabsTrigger>
+              <TabsTrigger value="data" className="gap-2">
+                <Table className="w-4 h-4" />
+                Sample Data
+              </TabsTrigger>
+              <TabsTrigger value="style" className="gap-2">
+                <Palette className="w-4 h-4" />
+                Style
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="general" className="flex-1 mt-0">
-            <div className="p-4 space-y-4">
-              <div>
-                <Label htmlFor="entity-name">Table Name</Label>
-                <Input
-                  id="entity-name"
-                  value={entity.name}
-                  onChange={(e) => onUpdateEntity(entity.id, { name: e.target.value })}
-                  className="mt-1"
-                />
+            <TabsContent value="general" className="flex-1 mt-0 overflow-y-auto" style={{ minHeight: 0, flex: '1 1 0%', display: 'flex', flexDirection: 'column' }}>
+              <div className="p-4 space-y-4">
+                <div>
+                  <Label htmlFor="entity-name">Table Name</Label>
+                  <Input
+                    id="entity-name"
+                    value={entity.name}
+                    onChange={(e) => onUpdateEntity(entity.id, { name: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
               </div>
-            </div>
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="fields" className="flex-1 mt-0 flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <h4 className="font-medium text-sm">Columns ({entity.attributes.length})</h4>
-              <Button size="sm" onClick={addAttribute} className="gap-1 h-8">
-                <Plus className="w-3 h-3" />
-                Add
-              </Button>
-            </div>
+            <TabsContent value="fields" className="mt-0 p-0" style={{ flex: '1 1 0%', minHeight: 0, overflow: 'hidden', padding: 0 }}>
+              <div className="h-full flex flex-col" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                  <h4 className="font-medium text-sm">Columns ({entity.attributes.length})</h4>
+                  <Button size="sm" onClick={addAttribute} className="gap-1 h-8">
+                    <Plus className="w-3 h-3" />
+                    Add
+                  </Button>
+                </div>
 
-            <ScrollArea className="flex-1">
-              <div className="p-4 space-y-3">
+                <div className="flex-1 overflow-y-auto" style={{ flex: '1 1 0%', minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                  <div className="p-4 space-y-3">
                 {entity.attributes.map((attr) => (
                   <div
                     key={attr.id}
@@ -266,12 +271,13 @@ export function RightSidebar({
                     </div>
                   </div>
                 ))}
+                  </div>
+                </div>
               </div>
-            </ScrollArea>
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="data" className="flex-1 mt-0 flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <TabsContent value="data" className="flex-1 mt-0 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
               <h4 className="font-medium text-sm">Sample Data ({sampleData.length} rows)</h4>
               <Button size="sm" onClick={addSampleRow} className="gap-1 h-8">
                 <Plus className="w-3 h-3" />
@@ -279,7 +285,7 @@ export function RightSidebar({
               </Button>
             </div>
 
-            <ScrollArea className="flex-1">
+            <div className="flex-1 min-h-0 overflow-y-auto">
               <div className="p-4 space-y-3">
                 {sampleData.length === 0 ? (
                   <div className="text-center text-gray-500 py-8">
@@ -339,29 +345,30 @@ export function RightSidebar({
                   </div>
                 )}
               </div>
-            </ScrollArea>
-          </TabsContent>
-
-          <TabsContent value="style" className="flex-1 mt-0">
-            <div className="p-4 space-y-4">
-              <div>
-                <Label htmlFor="entity-color">Table Color</Label>
-                <div className="flex gap-2 mt-2">
-                  {['#7aa2f7', '#9ece6a', '#bb9af7', '#f7768e', '#7dcfff', '#e0af68'].map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => onUpdateEntity(entity.id, { color })}
-                      className={`w-10 h-10 rounded-lg border-2 transition-all ${
-                        entity.color === color ? 'border-gray-900 dark:border-white scale-110' : 'border-gray-300 dark:border-gray-600'
-                      }`}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-              </div>
             </div>
           </TabsContent>
-        </Tabs>
+
+            <TabsContent value="style" className="flex-1 mt-0 overflow-y-auto min-h-0">
+              <div className="p-4 space-y-4">
+                <div>
+                  <Label htmlFor="entity-color">Table Color</Label>
+                  <div className="flex gap-2 mt-2">
+                    {['#7aa2f7', '#9ece6a', '#bb9af7', '#f7768e', '#7dcfff', '#e0af68'].map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => onUpdateEntity(entity.id, { color })}
+                        className={`w-10 h-10 rounded-lg border-2 transition-all ${
+                          entity.color === color ? 'border-gray-900 dark:border-white scale-110' : 'border-gray-300 dark:border-gray-600'
+                        }`}
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     );
   }

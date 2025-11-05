@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Canvas } from './components/Canvas';
 import ReactFlow, {
   addEdge,
@@ -11,6 +11,7 @@ import ReactFlow, {
   Connection,
   NodeChange,
   EdgeChange,
+  ReactFlowInstance,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import TableNode from './components/TableNode';
@@ -32,6 +33,7 @@ import { frontendToBackend } from './utils/schemaTransform';
 import { calculateTreeLayout } from './utils/treeLayout';
 import { toast } from 'sonner';
 import { entitiesToTables, tablesToEntities, TableNode as TableNodeType } from './utils/modeConversion';
+import { calculateTableStackLayout, getTableViewportCenter } from './utils/tableLayout';
 import { Edge } from 'reactflow';
 import { 
   calculateExpansionFactor, 
@@ -113,6 +115,7 @@ export default function App() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [currentPrompt, setCurrentPrompt] = useState('');
   const [originalPositions, setOriginalPositions] = useState<PositionStore | null>(null);
+  const tableFlowInstanceRef = useRef<ReactFlowInstance | null>(null);
 
   // Apply dark mode class to document root for portal-rendered components
   useEffect(() => {
@@ -269,8 +272,44 @@ export default function App() {
       if (mode === 'table' && entities.length > 0) {
         // Convert entities to tables when switching to table mode
         const { nodes, edges } = entitiesToTables(entities, relationships);
-        setTableNodes(nodes);
+        
+        // Apply vertical stack layout to tables immediately
+        const viewportCenter = getTableViewportCenter();
+        const newPositions = calculateTableStackLayout(
+          nodes as any[],
+          viewportCenter
+        );
+        
+        // Update node positions with compact layout
+        const layoutNodes = nodes.map(node => {
+          const newPos = newPositions.get(node.id);
+          if (newPos) {
+            return {
+              ...node,
+              position: { x: newPos.x, y: newPos.y },
+              // Clear any cached position
+              positionAbsolute: undefined,
+            } as any;
+          }
+          return node;
+        });
+        
+        // Force React Flow update with new array reference
+        setTableNodes([...layoutNodes] as any);
         setTableEdges(edges);
+        
+        console.log('✅ Tables initialized with compact layout:', layoutNodes.map(n => ({ 
+          id: n.id, 
+          name: n.data.tableName, 
+          pos: n.position 
+        })));
+        
+        // Force React Flow to fit view after a brief delay
+        setTimeout(() => {
+          if (tableFlowInstanceRef.current) {
+            tableFlowInstanceRef.current.fitView({ padding: 0.2, duration: 300 });
+          }
+        }, 150);
       } else if (mode === 'er-diagram' && tableNodes.length > 0) {
         // Convert tables to entities when switching to ER diagram mode
         const { entities: convertedEntities, relationships: convertedRelationships } = 
@@ -809,28 +848,85 @@ export default function App() {
   );
 
   const generateSQL = useCallback(() => {
+    if (entities.length === 0) {
+      setSqlCode('-- No entities defined yet');
+      return;
+    }
+
     let sql = '-- Generated SQL DDL\n\n';
     
-    entities.forEach(entity => {
-      sql += `CREATE TABLE ${entity.name} (\n`;
-      entity.attributes.forEach((attr, idx) => {
-        sql += `  ${attr.name} ${attr.type}`;
-        if (attr.isPrimaryKey) sql += ' PRIMARY KEY';
-        if (attr.isUnique && !attr.isPrimaryKey) sql += ' UNIQUE';
-        if (!attr.isNullable && !attr.isPrimaryKey) sql += ' NOT NULL';
-        if (idx < entity.attributes.length - 1) sql += ',';
-        sql += '\n';
+    entities.forEach((entity) => {
+      sql += `CREATE TABLE IF NOT EXISTS ${entity.name} (\n`;
+      
+      // Generate columns from attributes
+      const columnDefinitions: string[] = [];
+      entity.attributes.forEach((attr) => {
+        let columnDef = `  ${attr.name} ${attr.type}`;
+        
+        if (attr.isPrimaryKey) {
+          columnDef += ' PRIMARY KEY';
+        } else {
+          if (attr.isUnique) columnDef += ' UNIQUE';
+          if (!attr.isNullable) columnDef += ' NOT NULL';
+        }
+        
+        columnDefinitions.push(columnDef);
       });
       
-      const fkAttributes = entity.attributes.filter(a => a.isForeignKey);
-      if (fkAttributes.length > 0) {
-        fkAttributes.forEach(fk => {
-          sql += `,\n  FOREIGN KEY (${fk.name}) REFERENCES RefTable(id)`;
-        });
-        sql += '\n';
+      sql += columnDefinitions.join(',\n');
+      
+      // Add foreign key constraints based on relationships
+      const entityRelationships = relationships.filter(
+        rel => rel.fromEntityId === entity.id || rel.toEntityId === entity.id
+      );
+      
+      const foreignKeys: string[] = [];
+      
+        entityRelationships.forEach(rel => {
+          const toEntity = entities.find(e => e.id === rel.toEntityId);
+          
+          if (rel.fromEntityId === entity.id && toEntity) {
+          // This entity references another entity
+          const fkAttr = entity.attributes.find(attr => 
+            attr.name.toLowerCase().includes(toEntity.name.toLowerCase()) ||
+            attr.name.toLowerCase().endsWith('_id') ||
+            attr.isForeignKey
+          );
+          
+          if (fkAttr && toEntity.attributes.length > 0) {
+            // Find the primary key of the referenced entity
+            const refPrimaryKey = toEntity.attributes.find(a => a.isPrimaryKey) || toEntity.attributes[0];
+            if (refPrimaryKey) {
+              foreignKeys.push(`  FOREIGN KEY (${fkAttr.name}) REFERENCES ${toEntity.name}(${refPrimaryKey.name})`);
+            }
+          }
+        }
+      });
+      
+      // Also check for explicit foreign key attributes
+      entity.attributes.forEach(attr => {
+        if (attr.isForeignKey && !foreignKeys.some(fk => fk.includes(attr.name))) {
+          // Try to find the referenced entity
+          const refEntityName = attr.name.replace(/_id$/i, '').replace(/id$/i, '');
+          const refEntity = entities.find(e => 
+            e.name.toLowerCase().includes(refEntityName.toLowerCase()) ||
+            refEntityName.toLowerCase().includes(e.name.toLowerCase())
+          );
+          
+          if (refEntity && refEntity.attributes.length > 0) {
+            const refPrimaryKey = refEntity.attributes.find(a => a.isPrimaryKey) || refEntity.attributes[0];
+            if (refPrimaryKey) {
+              foreignKeys.push(`  FOREIGN KEY (${attr.name}) REFERENCES ${refEntity.name}(${refPrimaryKey.name})`);
+            }
+          }
+        }
+      });
+      
+      if (foreignKeys.length > 0) {
+        sql += ',\n' + foreignKeys.join(',\n');
       }
       
-      sql += ');\n\n';
+      sql += '\n);\n\n';
       
       // Add sample data if available
       const sampleData = (entity as any).sampleData || [];
@@ -839,12 +935,17 @@ export default function App() {
         sampleData.forEach((row: any) => {
           const columnNames = entity.attributes.map(attr => attr.name);
           const values = columnNames.map(name => {
-            const value = row.values[entity.attributes.find(attr => attr.name === name)?.id || ''];
+            const attr = entity.attributes.find(attr => attr.name === name);
+            const value = attr ? row.values[attr.id] : '';
             if (value === null || value === undefined || value === '') {
               return 'NULL';
             }
-            // Escape single quotes and wrap in quotes
-            return `'${String(value).replace(/'/g, "''")}'`;
+            // Escape single quotes and wrap in quotes for text types
+            const attrType = attr?.type || '';
+            if (attrType.includes('TEXT') || attrType.includes('VARCHAR') || attrType.includes('CHAR')) {
+              return `'${String(value).replace(/'/g, "''")}'`;
+            }
+            return String(value);
           });
           
           sql += `INSERT INTO ${entity.name} (${columnNames.join(', ')}) VALUES (${values.join(', ')});\n`;
@@ -854,7 +955,56 @@ export default function App() {
     });
     
     setSqlCode(sql);
-  }, [entities]);
+  }, [entities, relationships]);
+
+  // Track schema structure changes for SQL regeneration (including sample data)
+  // Using a more reliable method to detect changes
+  const schemaStructure = useMemo(() => {
+    const structure = {
+      entities: entities.map(e => {
+        const sampleData = (e as any).sampleData || [];
+        return {
+          id: e.id, 
+          name: e.name, 
+          attributesCount: e.attributes.length,
+          attributes: e.attributes.map(a => ({
+            id: a.id,
+            name: a.name,
+            type: a.type,
+            isPrimaryKey: a.isPrimaryKey,
+            isForeignKey: a.isForeignKey,
+            isUnique: a.isUnique,
+            isNullable: a.isNullable
+          })),
+          // Serialize sample data with all values for proper change detection
+          sampleDataCount: sampleData.length,
+          sampleData: sampleData.map((row: any) => ({
+            id: row.id,
+            // Create a deterministic string representation of values
+            valuesHash: JSON.stringify(Object.keys(row.values || {}).sort().map(key => `${key}:${row.values[key]}`).join('|'))
+          }))
+        };
+      }),
+      relationships: relationships.map(r => ({ 
+        id: r.id, 
+        fromEntityId: r.fromEntityId, 
+        toEntityId: r.toEntityId 
+      }))
+    };
+    return JSON.stringify(structure);
+  }, [entities, relationships]);
+
+  // Auto-regenerate SQL when schema structure changes
+  useEffect(() => {
+    // Always regenerate SQL when schema changes if we have entities
+    if (entities.length > 0) {
+      // Use a small delay to ensure state has fully updated
+      const timer = setTimeout(() => {
+        generateSQL();
+      }, 10);
+      return () => clearTimeout(timer);
+    }
+  }, [schemaStructure, generateSQL]);
 
   // SQL Preview toggle handler - generates SQL if it doesn't exist
   const toggleSqlPreview = useCallback(() => {
@@ -865,8 +1015,7 @@ export default function App() {
     } else {
       setShowSqlPreview(prev => !prev);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sqlCode, entities]);
+  }, [sqlCode, entities, generateSQL]);
 
   // Calculate viewport center for better positioning
   const getViewportCenter = () => {
@@ -882,7 +1031,53 @@ export default function App() {
   const autoLayout = () => {
     if (entities.length === 0) return;
     
-    // Use sequential compact layout (same as initial import)
+    // Check if we're in table view mode
+    if (viewMode === 'table' && tableNodes.length > 0) {
+      // Use vertical stack layout for tables
+      const viewportCenter = getTableViewportCenter();
+      
+      // Calculate stack positions for tables
+      const newPositions = calculateTableStackLayout(
+        tableNodes as any[],
+        viewportCenter
+      );
+      
+      // Update table node positions - force React Flow update
+      const updatedTableNodes = tableNodes.map(node => {
+        const newPos = newPositions.get(node.id);
+        if (newPos) {
+          // Create a new node object with updated position
+          return {
+            ...node,
+            position: { x: newPos.x, y: newPos.y },
+            // Force React Flow to update by changing positionAbsolute if it exists
+            positionAbsolute: undefined,
+          } as any;
+        }
+        return node;
+      });
+      
+      // Force update by creating a new array reference
+      setTableNodes([...updatedTableNodes] as any);
+      
+      // Force React Flow to fit view after layout change
+      setTimeout(() => {
+        if (tableFlowInstanceRef.current) {
+          tableFlowInstanceRef.current.fitView({ padding: 0.2, duration: 300 });
+        }
+      }, 150);
+      
+      console.log('✅ Table positions updated:', updatedTableNodes.map(n => ({ 
+        id: n.id, 
+        name: n.data.tableName, 
+        pos: n.position 
+      })));
+      
+      toast.success('Table layout optimized!');
+      return;
+    }
+    
+    // Entity/ER diagram view - use sequential compact layout
     const viewportCenter = getViewportCenter();
     
     // Calculate optimal positions using sequential layout - no overlaps
@@ -1088,6 +1283,9 @@ export default function App() {
                 onNodesChange={onTableNodesChange}
                 onEdgesChange={onTableEdgesChange}
                 onConnect={onTableConnect}
+                onInit={(instance) => {
+                  tableFlowInstanceRef.current = instance;
+                }}
                 nodeTypes={tableNodeTypes}
                 fitView
               >
@@ -1110,6 +1308,7 @@ export default function App() {
         />
 
         <SQLPreview 
+          key={sqlCode} 
           sql={sqlCode} 
           isVisible={showSqlPreview}
           onClose={() => setShowSqlPreview(false)} 

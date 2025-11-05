@@ -1,6 +1,6 @@
 import React from 'react';
 import { Entity, Relationship } from '../App';
-import { detectAndResolveOverlaps } from './tableLayoutUtils';
+// Removed unused import - table layout is now handled by tableSequentialLayout
 
 export type TableColumn = {
   name: string;
@@ -106,10 +106,10 @@ export function entitiesToTables(
         referencesColumn: 'id',
       }));
 
-    // Ensure reasonable positioning for tables with improved spacing
-    // Table mode requires more space due to larger node size (500x300px typical)
-    const x = entity.x || 150 + (index % 2) * 900; // Increased to 900px horizontal spacing
-    const y = entity.y || 150 + Math.floor(index / 2) * 500; // Increased to 500px vertical spacing
+    // Use compact spacing for tables
+    // Compact layout: reduced spacing for minimal space usage
+    const x = entity.x || 150 + (index % 2) * 600; // Reduced to 600px horizontal spacing (was 900)
+    const y = entity.y || 150 + Math.floor(index / 2) * 400; // Reduced to 400px vertical spacing (was 500)
 
     return {
       id: entity.id,
@@ -155,10 +155,11 @@ export function entitiesToTables(
     };
   });
 
-  // Resolve overlaps by repositioning nodes that overlap with each other
-  const resolvedNodes = detectAndResolveOverlaps(nodes, 500, 300, 50);
+  // Skip overlap resolution here - compact layout will be applied in handleViewModeChange
+  // This allows the sequential layout algorithm to position tables optimally
+  // const resolvedNodes = detectAndResolveOverlaps(nodes, 500, 300, 50);
 
-  return { nodes: resolvedNodes, edges };
+  return { nodes, edges };
 }
 
 /**
@@ -185,6 +186,9 @@ export function tablesToEntities(
         isForeignKey,
         isNullable: !isPrimaryKey,
         isUnique: isPrimaryKey,
+        x: 0, // Position will be calculated by attribute layout
+        y: 0, // Position will be calculated by attribute layout
+        entityId: node.id, // Reference to parent entity
       };
     });
 

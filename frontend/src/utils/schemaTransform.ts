@@ -10,6 +10,10 @@ export interface BackendTable {
     name: string;
     type: string;
   }>;
+  sampleData?: Array<{
+    id: string;
+    values: Record<string, string>;
+  }>;
 }
 
 export interface BackendRelationship {
@@ -135,6 +139,25 @@ export async function backendToFrontend(schemaData: BackendSchema): Promise<{
       };
     });
 
+    // Restore sample data if it exists in the backend schema
+    const sampleData: Entity['sampleData'] = table.sampleData 
+      ? table.sampleData.map((row) => {
+          // Map row values back to attribute IDs
+          // Backend stores values by attribute name, so we need to map them to attribute IDs
+          const rowValues: Record<string, string> = {};
+          attributes.forEach((attr) => {
+            const attrId = attr.id;
+            const attrName = attr.name;
+            // Try to get value by attribute name (as stored in backend) or by ID
+            rowValues[attrId] = row.values[attrName] || row.values[attrId] || '';
+          });
+          return {
+            id: row.id,
+            values: rowValues,
+          };
+        })
+      : undefined;
+
     return {
       id: entityId,
       name: table.name,
@@ -142,6 +165,7 @@ export async function backendToFrontend(schemaData: BackendSchema): Promise<{
       y: 0, // Will be set by force-directed algorithm
       color: ENTITY_COLORS[index % ENTITY_COLORS.length],
       attributes,
+      sampleData, // Include sample data in entity
       animationIndex: index,
     };
   });
@@ -347,10 +371,28 @@ export function frontendToBackend(
       type: attr.type,
     }));
 
+    // Include sample data if it exists
+    // Map values from attribute IDs to attribute names for backend storage
+    const sampleData = entity.sampleData && entity.sampleData.length > 0
+      ? entity.sampleData.map(row => {
+          // Convert values from attribute ID keys to attribute name keys
+          const valuesByName: Record<string, string> = {};
+          entity.attributes.forEach(attr => {
+            const value = row.values[attr.id] || '';
+            valuesByName[attr.name] = value;
+          });
+          return {
+            id: row.id,
+            values: valuesByName, // Store by attribute name for backend
+          };
+        })
+      : undefined;
+
     const table: BackendTable = {
       name: entity.name,
       attributes,
       columns,
+      ...(sampleData && sampleData.length > 0 && { sampleData }), // Only include if not empty
     };
 
     tables.push(table);

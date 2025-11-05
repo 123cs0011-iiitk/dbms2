@@ -17,12 +17,12 @@ interface Point {
 const ENTITY_WIDTH = 180;
 const ENTITY_HEIGHT = 70;
 
-// Simple, fixed spacing parameters
-const MIN_SPACING = 280; // Large gap to accommodate relationship diamonds between entities
-const RADIUS_STEP = 320; // Distance between spiral rings
-const COLLISION_PADDING = 60; // Extra padding for collision detection
-const STARTING_RADIUS = 300; // Initial radius from center
-const ANGLE_STEP = 12; // Degrees between positions
+// Compact spacing parameters - minimized for tighter layout
+const MIN_SPACING = 200; // Reduced gap while still accommodating relationship diamonds
+const RADIUS_STEP = 220; // Reduced distance between spiral rings
+const COLLISION_PADDING = 40; // Reduced padding for collision detection
+const STARTING_RADIUS = 150; // Reduced initial radius from center
+const ANGLE_STEP = 15; // Slightly larger angle step for better distribution
 
 /**
  * Check if two line segments intersect
@@ -193,10 +193,14 @@ function findNonOverlappingPosition(
   const candidates: Candidate[] = [];
   
   // Collect multiple candidates to find the best position with minimal crossings
+  // For minimal space, start with smaller radius and more aggressive search
+  let searchRadius = radius;
+  let searchAngle = angle;
+  
   while (attempts < maxAttempts && candidates.length < maxCandidates) {
-    const angleRad = (angle * Math.PI) / 180;
-    const x = centerX + Math.cos(angleRad) * radius - ENTITY_WIDTH / 2;
-    const y = centerY + Math.sin(angleRad) * radius - ENTITY_HEIGHT / 2;
+    const angleRad = (searchAngle * Math.PI) / 180;
+    const x = centerX + Math.cos(angleRad) * searchRadius - ENTITY_WIDTH / 2;
+    const y = centerY + Math.sin(angleRad) * searchRadius - ENTITY_HEIGHT / 2;
     
     // Check if this position overlaps with any placed entity
     let hasOverlap = false;
@@ -220,11 +224,11 @@ function findNonOverlappingPosition(
       candidates.push({ pos: { x, y }, crossings, distance });
     }
     
-    // Move to next position in spiral
-    angle += ANGLE_STEP;
-    if (angle >= 360) {
-      angle = 0;
-      radius += RADIUS_STEP;
+    // Move to next position in spiral - for minimal space, use tighter spiral
+    searchAngle += ANGLE_STEP;
+    if (searchAngle >= 360) {
+      searchAngle = 0;
+      searchRadius += RADIUS_STEP;
     }
     
     attempts++;
@@ -232,10 +236,12 @@ function findNonOverlappingPosition(
   
   // If we found candidates, choose the best one
   if (candidates.length > 0) {
-    // Sort by: 1) fewest crossings, 2) closest to target
+    // Sort by: 1) closest to target (prioritize minimal space), 2) fewest crossings
     candidates.sort((a, b) => {
-      if (a.crossings !== b.crossings) return a.crossings - b.crossings;
-      return a.distance - b.distance;
+      // Primary: minimize distance to use minimal space
+      if (Math.abs(a.distance - b.distance) > 5) return a.distance - b.distance;
+      // Secondary: minimize crossings if distances are similar
+      return a.crossings - b.crossings;
     });
     
     const best = candidates[0];
@@ -273,7 +279,7 @@ export function calculateSequentialLayout(
   entities.forEach(entity => {
     connections.set(entity.id, new Set());
   });
-  
+
   relationships.forEach(rel => {
     connections.get(rel.fromEntityId)?.add(rel.toEntityId);
     connections.get(rel.toEntityId)?.add(rel.fromEntityId);
@@ -309,6 +315,7 @@ export function calculateSequentialLayout(
         if (count > 0) {
           targetX = sumX / count;
           targetY = sumY / count;
+          // For connected entities, prefer positions closer to connections (minimal space)
           console.log(`🔗 "${entity.name}" targeting near connected entities at (${Math.round(targetX)}, ${Math.round(targetY)})`);
         }
       }

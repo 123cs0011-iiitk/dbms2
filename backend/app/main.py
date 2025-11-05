@@ -31,6 +31,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize database on startup
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database when the application starts"""
+    init_database()
+
 # Configure Gemini AI
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY and GEMINI_API_KEY != "your_gemini_api_key_here":
@@ -46,7 +52,13 @@ else:
     GEMINI_AVAILABLE = False
 
 # Database configuration
-DB_PATH = os.getenv("DB_PATH", "./data/database.sqlite")
+DB_PATH_ENV = os.getenv("DB_PATH", "./data/database.sqlite")
+# Resolve database path relative to backend directory
+if not os.path.isabs(DB_PATH_ENV):
+    backend_dir = Path(__file__).parent.parent
+    DB_PATH = os.path.join(backend_dir, DB_PATH_ENV.lstrip('./'))
+else:
+    DB_PATH = DB_PATH_ENV
 
 # Pydantic models
 class GenerateSQLRequest(BaseModel):
@@ -98,7 +110,10 @@ class SchemaListResponse(BaseModel):
 # Database utilities
 def init_database():
     """Initialize the SQLite database"""
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    # Create directory if it doesn't exist
+    db_dir = os.path.dirname(DB_PATH)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
     
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
